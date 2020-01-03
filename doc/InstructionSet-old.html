@@ -1,0 +1,1652 @@
+<!DOCTYPE html>
+<!--
+   Copyright 2015 Greg Hall
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+
+   $Id: InstructionSet.html 5631 2017-02-05 02:30:40Z  $
+-->
+<html>
+  <head>
+    <title>Instruction Set</title>
+    <style type="text/css">  
+      /* FF loads whatever it can first, in the order provided. List ttf first */
+      @font-face {
+        font-family: "Roboto Mono";
+        src: url("roboto-mono.eot");
+        src: url("roboto-mono.eot?#iefix") format("embedded-opentype"),
+             url("roboto-mono.woff2") format("woff2"),
+             url("roboto-mono.woff") format("woff"),
+             url("roboto-mono.ttf") format("truetype"),
+             url("roboto-mono.svg#webfont") format("svg");
+      }
+    
+      /* Clear spacings */
+      * {
+        margin: 0;
+        padding: 0;
+        border: none;
+      }
+      
+      /* Set some defaults */
+      body {
+        margin: 5px;
+        font-family: "Roboto Mono", monospace;
+        font-size: 9pt;
+      }
+      
+      /* Every sibling except the first */
+      * + * {
+        margin-top: 10px;
+      }
+      
+      /* Some browsers apply * + * to <br> tags, some don't */
+      br {
+        margin: 0;
+      }
+      
+      h1 {
+        font-size: 1.4em;
+        font-weight: bold;
+      }
+      
+      h2 {
+        font-size: 1.2em;
+        font-weight: bold;
+      }
+      
+      ol > li {
+        margin-left: 2em;
+      }
+      
+      li + li, ol ul {
+        margin-top: 0.25em;
+      }
+      
+      ul > li {
+        list-style: none;
+        margin-left: 1em;
+      }
+      
+      ul > li:before {
+        position: relative;
+        left: -1.25em;
+        top: -0.25em;
+        content: "\25CF";
+        font-size: 0.75em;
+      }
+      
+      table {
+        border-collapse: collapse;
+        font-size: 1em;
+        font-weight: normal;
+      }
+      
+      th, td {
+        border: 1px solid black;
+        padding: 2px 5px;
+        white-space: nowrap;
+      }
+      
+      th {
+        font-weight: bold;
+        text-align: center;
+      }
+      
+      /* Table cells that show the header for a group of rows */
+      td[colspan="4"] {
+        font-weight: bold;
+        padding: 10px 5px;
+      }
+      
+      /* Colours for the opcodes legends */
+      
+      /*
+       * Blue
+       * #8DA9E2
+       * #A9BFE9
+       *
+       * Green
+       * #7DBD9D
+       * #9DCEB6
+       *
+       * Orange
+       * #CC7C2C
+       * #EF7F0E
+       *
+       * Yellow
+       * #BCAC34
+       * #E2CB1B
+       *
+       * Red
+       * #CC2C2F
+       * #F40E12
+       *
+       * Grey
+       * #AAAAAA
+       */
+      
+      .ins0-binary {
+        background-color: #8DA9E2;
+      }
+      
+      .ins0-branch {
+        background-color: #A9BFE9;
+      }
+      
+      .ins0-move {
+        background-color: #7DBD9D;
+      }
+      
+      .ins0-other {
+        background-color: #9DCEB6;
+      }
+      
+      .ins0-ptr {
+        background-color: #CC7C2C;
+      }
+      
+      .ins0-stack {
+        background-color: #EF7F0E;
+      }
+      
+      .ins0-status {
+        background-color: #BCAC34;
+      }
+      
+      .ins0-unary {
+        background-color: #E2CB1B;
+      }
+      
+      /* Colour for the highlighting of opcodes */
+      .hover {
+        background-color: #EEEEEE;
+      }
+      
+      /* Default count of opcodes, these are really just markers for JS */
+      .count-ins0-binary::before {
+        content: "0";
+      }
+      
+      .count-ins0-branch::before {
+        content: "0";
+      }
+      
+      .count-ins0-move::before {
+        content: "0";
+      }
+      
+      .count-ins0-other::before {
+        content: "0";
+      }
+      
+      .count-ins0-ptr::before {
+        content: "0";
+      }
+      
+      .count-ins0-stack::before {
+        content: "0";
+      }
+      
+      .count-ins0-status::before {
+        content: "0";
+      }
+      
+      .count-ins0-unary::before {
+        content: "0";
+      }
+    </style>
+    
+    <script type="text/javascript">
+      /*
+       * Store references to the inserted css rules in a global var. Some browsers decide that JS
+       * code that responds to an event that accesses stylesheet rules may cause security problems.
+       * By storing the styles we need in a global var, the event code can access them directly by
+       * reference, bypassing the security mechanism.
+       */
+      var legendStyles = {
+        hover: getCSSRules(".hover")
+      };
+    
+      function doLoad(
+      ) {
+        // Get the style rule names for the opcodes from the names of the .count-insX-*::before rules, where X is 0 - 7
+        for (var instrSet = 0; instrSet <= 7; instrSet++) {
+          var colourRegex = new RegExp("^[.]count-(ins" + instrSet + "-[^:]*)::before$");
+          var colourRules = getCSSRules(
+            colourRegex
+          );
+          
+          if (colourRules) {
+            var colourNames = colourRules.map(
+              function(rule) {
+                return colourRegex.exec(rule.selectorText)[1];
+              }
+            );
+        
+            /*
+             * Create a sorted array of {cssClass: k, count: c} pairs by counting elements in the
+             * opcodes table. Sort in reverse from highest count to lowest count.
+             */
+            var opcodeCountsToClass = colourNames.reduce(
+              function(opcodeCountsToClass, value) {
+                opcodeCountsToClass.push(
+                  {cssClass: value, count: document.querySelectorAll('#opcodes .' + value).length}
+                );
+                
+                return opcodeCountsToClass;
+              },
+              []
+            ).sort(
+              function(a, b) {
+                return b.count - a.count;
+              }
+            );
+                    
+            /*
+             * Set the counts of opcodes by overriding the .count-X::before rules with new ones.
+             * Re-order the colours, so that the colours are applied from most to least popular rule,
+             * by overriding the .X rules that match the .count-X::before rules.
+             *
+             * The background-color is provided as an rgb(r,g,b) expression regardless of how it was
+             * declared in the actual rule text. Some versions of IE ignore a
+             * background-color: rgb(r,g,b) rule, instead expecting background: rgb(r,g,b).
+             *
+             * The simplest technically correct general solution is to convert the rgb expression into
+             * a hex string definition.
+             *
+             * While we're at it, convert array of counts and names to a map of names to count
+             */
+            var colourNamesIndex = 0;
+            var rgbRegex = /[(]\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/;
+            var opcodeCounts = {};
+            opcodeCountsToClass.forEach(
+              function(value) {
+                // Insert count content
+                insertCSSRule(".count-" + value.cssClass + "::before{content: '" + value.count + "';}");
+                
+                /*
+                 * Insert new colour definition.
+                 * The colour value we want to use is the next one from the colourNames array.
+                 * The class name to define the colour for is the class of the current value.
+                 */
+                var rgbParts = rgbRegex.exec(
+                  getCSSRules("." + colourNames[colourNamesIndex++]).style.backgroundColor
+                );
+                
+                var hexString = "#" +
+                  (rgbParts[1] < 16 ? "0" : "") + (+rgbParts[1]).toString(16) +
+                  (rgbParts[2] < 16 ? "0" : "") + (+rgbParts[2]).toString(16) +
+                  (rgbParts[3] < 16 ? "0" : "") + (+rgbParts[3]).toString(16);
+                
+                legendStyles[value.cssClass] =
+                  insertCSSRule(
+                    "." + value.cssClass + "{background-color: " + hexString + ";}"
+                  );
+                
+                opcodeCounts[value.cssClass] = value.count;
+              }
+            );
+    
+            // Get the legend rows as presented        
+            var originalLegend = document.querySelectorAll("#legend" + instrSet + " tbody")[0];
+            
+            // Get the legend rows in the order we want
+            var opcodeRows = Array.prototype.slice.call(
+              originalLegend.children,
+              0
+            ).reduce(
+              // Split each row into two for sorting
+              function(split, row) {
+                split.push(Array.prototype.slice.call(row.children, 0, 3));
+                split.push(Array.prototype.slice.call(row.children, 3));
+                return split;
+              },
+              []
+            ).sort(
+              /*
+               * Sort in order of decreasing opcode counts, then by ascending name.
+               * Since the table is split into two columns, one row will have a blank entry if there is an odd number of
+               * elements. The blank row will not have an entry in opcodeCounts, and opcodeCounts[...] will be undefined.
+               * In such cases, convert undefined to 0.
+               */
+              function(a, b) {
+                var compare = (opcodeCounts[b[2].className] || 0) - (opcodeCounts[a[2].className] || 0);
+                return compare !== 0 ? compare : a[0].textContent.localeCompare(b[0].textContent);
+              }
+            ).reduce(
+              // Join pairs of rows together
+              function(join, row, index, sorted) {
+                if (index < sorted.length / 2) {
+                  join.push(row.concat(sorted[index + sorted.length / 2]));
+                }
+                return join;
+              },
+              []
+            ).forEach(
+              function(oldRow, index) {
+                if (index === 0) {
+                  while (originalLegend.hasChildNodes()) {
+                    originalLegend.removeChild(originalLegend.lastChild);
+                  }
+                }
+              
+                var newRow = document.createElement("tr");
+                
+                oldRow.forEach(
+                  function(col) {
+                    newRow.appendChild(col);
+                  }
+                );
+                
+                originalLegend.appendChild(newRow);
+              }
+            );
+            
+            // Set up events for the legend
+            var dom = document.querySelectorAll("#legend" + instrSet + " tbody td[class]");
+            for (var i in dom) {
+              dom[i].onmouseenter = doEnterExitLegend;
+              dom[i].onmouseout   = doEnterExitLegend;
+            }
+          }
+        }
+      };
+      
+      var insertCSSRule = (function() {
+        var lastStyleSheet = document.styleSheets[document.styleSheets.length - 1];
+      
+        return function(rule) {
+          return lastStyleSheet.cssRules[
+            lastStyleSheet.insertRule(
+              rule,
+              lastStyleSheet.cssRules.length
+            )
+          ];
+        };
+      })(); 
+            
+      function getCSSRules(ruleTest, deleteFlag) {
+        var isRegex = ruleTest instanceof RegExp;
+        if (! isRegex) {
+          ruleTest = ruleTest.toLowerCase();
+        }
+        var result = false;
+        
+        if (document.styleSheets) {
+          OUTER:
+          for (var i = 0; i < document.styleSheets.length; i++) {
+            var styleSheet = document.styleSheets[i];
+            var cssRules = styleSheet.cssRules ? styleSheet.cssRules : styleSheet.rules;
+            
+            for (var j in cssRules) {
+              var cssRule = cssRules[j];
+              
+              // Not all CSS Rule objects have a selectorText property
+              if (
+                cssRule &&
+                cssRule.selectorText &&
+                (
+                  (isRegex && ruleTest.test(cssRule.selectorText.toLowerCase())) ||
+                  ((! isRegex) && (cssRule.selectorText.toLowerCase() === ruleTest))
+                )
+              ) {
+                if (deleteFlag === 'delete') {
+                  if (styleSheet.deleteRule) {
+                    styleSheet.deleteRule(j);
+                  } else {
+                    styleSheet.removeRule(j);
+                  }
+                  
+                  result = true;
+                  break OUTER;
+                } else if (isRegex) {
+                  if (result === false) {
+                    result = [cssRule];
+                  } else {
+                    result.push(cssRule);
+                  }
+                } else {
+                  result = cssRule;
+                  break OUTER;
+                }
+              }
+            }
+          }
+        }
+        
+        return result;
+      };
+      
+      function doEnterExitLegend(
+        e
+      ) {
+        var evt = e || window.event;
+        var source = evt.target || evt.srcElement;
+        
+        var srcRule = legendStyles[source.className];
+        var dstRule = legendStyles.hover;
+        
+        var tmp = srcRule.style.backgroundColor;
+        srcRule.style.backgroundColor = dstRule.style.backgroundColor;
+        dstRule.style.backgroundColor = tmp;
+      };
+    </script>
+  </head>
+  <body onload="doLoad();">
+    <h1>Instruction Set</h1> 
+    
+    <h2>Registers</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Purpose</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>R0 - R3</td>
+          <td>8 bit General purpose registers</td>
+        </tr>
+        <tr>
+          <td>W0</td>
+          <td>16 bit register of R0 and R1 combined</td>
+        </tr>
+        <tr>
+          <td>W1</td>
+          <td>16 bit register of R2 and R3 combined</td>
+        </tr>
+        <tr>
+          <td>EX</td>
+          <td>24 bit register of R0, R1, and R2 combined</td>
+        </tr>
+        <tr>
+          <td>CX</td>
+          <td>16 bit counter</td>
+        </tr>
+        <tr>
+          <td>CS</td>
+          <td>8 bit signed counter step</td>
+        </tr>
+        <tr>
+          <td>IX</td>
+          <td>16 bit index</td>
+        </tr>
+        <tr>
+          <td>IS</td>
+          <td>8 bit signed index step</td>
+        </tr>
+        <tr>
+          <td>ST</td>
+          <td>8 bit status register, consists of CVZNI---: Carry, oVerflow, Zero, Negative, Interrupt disable</td>
+        </tr>
+        <tr>
+          <td>CP</td>
+          <td>24 bit code pointer</td>
+        </tr>
+        <tr>
+          <td>PC</td>
+          <td>24 bit program counter</td>
+        </tr>
+        <tr>
+          <td>DP</td>
+          <td>24 bit data pointer</td>
+        </tr>
+        <tr>
+          <td>SB</td>
+          <td>24 bit stack base</td>
+        </tr>
+        <tr>
+          <td>SP</td>
+          <td>16 bit stack pointer</td>
+        </tr>
+      </tbody>
+    </table>
+    
+    <h2>Address modes</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Mode</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>R</td>
+          <td>One of the general purpose registers</td>
+        </tr>
+        <tr>
+          <td>O</td>
+          <td>
+            An 8 bit literal operand.<br/>
+            For branching and jumping instructions, the operand is a signed value relative to the PC after reading the instruction.<br/>
+            This allows an effective jump of -126 bytes backwards to 129 bytes forwards relative to the first byte of the instruction.
+          </td>
+        </tr>
+        <tr>
+          <td>W</td>
+          <td>A 16 bit literal operand</td>
+        </tr>
+        <tr>
+          <td>X</td>
+          <td>A 24 bit literal operand</td>
+        </tr>
+        <tr>
+          <td>[O]</td>
+          <td>
+            An 8 bit literal index relative to SP: SP + O<br/>
+            This allows for local variables to be accessed on the stack.
+          </td>
+        </tr>
+        <tr>
+          <td>$M</td>
+          <td>
+            The contents of an address relative to the DP: *(DP + M)<br/>
+            If the DP = 000100 and M = 0200, the effective address is 000100 + 0200 = 000300.<br/>
+          </td>
+        </tr>
+        <tr>
+          <td>*M</td>
+          <td>
+            The contents of a pointer relative to the DP: *(DP + *(DP + M))<br/>
+            If DP = 000100, M = 0200, and $000300 contains 0400, the effective address is 000100 + 0400 = 000500.<br/>
+          </td>
+        </tr>
+        <tr>
+          <td>[M]</td>
+          <td>
+            The contents of an indexed address relative to the DP: *(DP + M + IX)<br/>
+            If DP = 000100, M = 0200 and IX = 0050, the effective address is 000100 + 0200 + 0050 = 000350.<br/>
+          </td>
+        </tr>
+        <tr>
+          <td>*[M]</td>
+          <td>
+            The contents of an indexed pointer address (table of pointers) relative to the DP: *(DP + *(DP + M + IX))<br/>
+            If DP = 000100, M = 0200, IX = 0050, and $000350 contains 0400, the effective address is <br/>
+            000100 + 0400 = 000500.
+          </td>
+        </tr>
+        <tr>
+          <td>*X</td>
+          <td>
+            The contents of an absolute pointer: *(*(X))<br/>
+            If X = 000100 and $000100 contains 000200, the effective address is 000100 + 000200 = 000300.<br/>
+          </td>
+        </tr>
+        <tr>
+          <td>*[X]</td>
+          <td>
+            The contents of an indexed absolute pointer address (table of pointers): *(*(X + IX))<br/>
+            If X = 000100, IX = 0050, and $000150 contains 000200, the effective address is 000100 + 000200 = 000300.
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    
+    <h2>Instructions</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Description</th>
+          <th>Modes</th>
+          <th>Status flags</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td colspan="4">Binary (<span class="count-ins0-binary"></span> opcodes)</td>
+        </tr>
+        <tr>
+          <td>ADC</td>
+          <td>Add with carry</td>
+          <td>
+            R = R + O + C<br/>
+            R = R + $M + C<br/>
+            R0 = R0 + R1 + C<br/>
+            R2 = R2 + R3 + C;<br/>
+            C = 1 if (BIT7(Op1) = BIT7(Op2) = 1) or (BIT7(Op1) != BIT7(Op2) and BIT7(Op1 + Op2 + C) = 0);<br/>
+            V = 1 if BIT7(Op1) = BIT7(Op2) and BIT7(Op1) != BIT7(Op1 + Op2 + C);
+          </td>
+          <td>CVZN----</td>
+        </tr>
+        <tr>
+          <td>AND</td>
+          <td>Bitwise AND</td>
+          <td>Op1 = Op1 & Op2</td>
+          <td>--ZN----</td>
+        </tr>
+        <tr>
+          <td>CMP</td>
+          <td>Compare</td>
+          <td>
+            CMP $M,O<br/>
+            C = 1 if Op1 &gt;= Op2 unsigned;<br/>
+            V = 1 if Op1 &gt;= Op2 signed<br/>
+            Z = 1 if Op1 = Op2
+          </td>
+          <td>CVZ-----</td>
+        </tr>
+        <tr>
+          <td>OR</td>
+          <td>Bitwise OR</td>
+          <td>Op1 = Op1 | Op2</td>
+          <td>--ZN----</td>
+        </tr>
+        <tr>
+          <td>SBB</td>
+          <td>Subtract with borrow</td>
+          <td>
+            If D = 0, perform 8 bit integer subtraction with borrow:<br/>
+            Op1 = Op1 - Op2 - C;<br/>
+            C = 1 if (Op2 + C) > Op1 unsigned;<br/>
+            V = 1 if BIT7(Op1) != BIT7(Op2) and BIT7(Op2) = BIT7(Op1 - Op2 - C)<br/>
+            If D = 1, perform 8 bit BCD subtraction with borrow:
+          </td>
+          <td>CVZN----</td>
+        </tr>
+        <tr>
+          <td>SET</td>
+          <td>Set bits</td>
+          <td>
+            If Op3 = 1: Op1 = Op1 | Op2 (Set Op1 to 1 everywhere Op2 is 1);<br/>
+            If Op3 = 2: Op1 = Op1 ^ Op2 (Set Op1 to 0 everywhere Op2 is 0);<br/>
+            If Op3 = 4: Op1 = Op2;<br/>
+            If Op3 = 8: Op1 = NOT(Op2);<br/>
+          </td>
+          <td>--------</td>
+        </tr>
+        <tr>
+          <td>SLR</td>
+          <td>Shift left or right</td>
+          <td>
+            If C = 0: Op1 = Op1 &lt;&lt; Op2;<br/>
+            If C = 1 and V = 1: Op1 = Op1 &gt;&gt; Op2, copying the sign bit of Op1;<br/>
+            If C = 1 and V = 0: Op1 = Op1 &gt;&gt; Op2;<br/>
+          </td>
+          <td>--ZN----</td>
+        </tr>
+        <tr>
+          <td>TST</td>
+          <td>Test bits</td>
+          <td>
+            C = 1 if (Op1 & Op2) = Op2 (Op1 is 1 everywhere Op2 is 1);<br/>
+            V = 1 if NOT(Op1 & Op2) = NOT(Op2) (Op1 is 0 everywhere Op2 is 0);<br/>
+            Z = 1 if Op1 = Op2;<br/>
+            N = 1 if Op1 = NOT(Op2);
+          </td>
+          <td>CVZN----</td>
+        </tr>
+        <tr>
+          <td>XOR</td>
+          <td>Bitwise XOR</td>
+          <td>Op1 = Op1 ^ Op2</td>
+          <td>--ZN----</td>
+        </tr>
+        <tr>
+          <td colspan="4">Branch and Jump (<span class="count-ins0-branch"></span> opcodes)</td>
+        </tr>
+        <tr>
+          <td>BCC (BLTU)</td>
+          <td>Branch on carry clear (Op1 &lt; Op2 unsigned)</td>
+          <td>
+            If C = 0 then:<br/>
+            PC = PC + O
+          </td>
+          <td>--------</td>
+        </tr>
+        <tr>
+          <td>BCS (BGEU)</td>
+          <td>Branch on carry set (Op1 &gt;= Op2 unsigned)</td>
+          <td>
+            If C = 1 then:<br/>
+            PC = PC + O
+          </td>
+          <td>--------</td>
+        </tr>
+        <tr>
+          <td>BEQ</td>
+          <td>Branch on equal to zero (Op1 = Op2)</td>
+          <td>
+            If Z = 1 then:<br/>
+            PC = PC + O
+          </td>
+          <td>--------</td>
+        </tr>
+        <tr>
+          <td>BMI</td>
+          <td>Branch on negative</td>
+          <td>
+            If N = 1 then:<br/>
+            PC = PC + O
+          </td>
+          <td>--------</td>
+        </tr>
+        <tr>
+          <td>BNE</td>
+          <td>Branch on not equal to zero (Op1 != Op2)</td>
+          <td>
+            If Z = 0 then:<br/>
+            PC = PC + O
+          </td>
+          <td>--------</td>
+        </tr>
+        <tr>
+          <td>BPL</td>
+          <td>Branch on positive</td>
+          <td>
+            If N = 0 then:<br/>
+            PC = PC + O
+          </td>
+          <td>--------</td>
+        </tr>
+        <tr>
+          <td>BVC (BLTS)</td>
+          <td>Branch on overflow clear (Op1 &lt; Op2 signed)</td>
+          <td>
+            If V = 0 then:<br/>
+            PC = PC + O
+          </td>
+          <td>--------</td>
+        </tr>
+        <tr>
+          <td>BVS (BGES)</td>
+          <td>Branch on overflow set (Op1 &gt;= Op2 signed)</td>
+          <td>
+            If V = 1 then:<br/>
+            PC = PC + O
+          </td>
+          <td>--------</td>
+        </tr>
+        <tr>
+          <td>JMA</td>
+          <td>Jump to an absolute address</td>
+          <td>
+            PC = X<br/>
+            PC = $($(X))<br/>
+            PC = $($(X + IX))
+          </td>
+          <td>--------</td>
+        </tr>
+        <tr>
+          <td>JMP</td>
+          <td>Jump to address</td>
+          <td>
+            PC = PC + O<br/>
+            PC = CP + X<br/>
+            PC = $($(CP + M))<br/>
+            PC = $($(CP + M + IX))
+          </td>
+          <td>--------</td>
+        </tr>
+        <tr>
+          <td>JSA</td>
+          <td>Jump to an absolute subroutine</td>
+          <td>
+            Push PC;<br/>
+            PC = X<br/>
+            PC = $($(X))<br/>
+            PC = $($(X + IX))<br/>
+            A 24 bit address is pushed on the stack.
+          </td>
+          <td>--------</td>
+        </tr>
+        <tr>
+          <td>JSR</td>
+          <td>Jump to subroutine</td>
+          <td>
+            Push PC;<br/>
+            PC = PC + O<br/>
+            PC = CP + X<br/>
+            PC = $($(CP + M))<br/>
+            PC = $($(CP + M + IX))<br/>
+            A 24 bit address is pushed on the stack.
+          </td>
+          <td>--------</td>
+        </tr>
+        <tr>
+          <td>RTS</td>
+          <td>Return from subroutine</td>
+          <td>
+            Pull PC<br/>
+            SP = SP + O, Pull PC;<br/><br/>
+            A 16 bit address is pulled from the stack.<br/>
+            When an operand is provided, it is an unsigned number of bytes to add to SP.<br/>
+            A hardware error occurs if the stack underflows.
+          </td>
+          <td>--------</td>
+        </tr>
+        <tr>
+          <td colspan="4">Move and swap (<span class="count-ins0-move"></span> opcodes)</td>
+        </tr>
+        <tr>
+          <td>MOV</td>
+          <td>Move data</td>
+          <td>
+            Rx = Ry, where x != y<br/>
+            SWP R0,IS<br/>
+            SWP R0,CS<br/>
+            SWP W0,W1<br/>
+            SWP W0,CX<br/>
+            SWP W0,IX<br/>
+            W0 = SP<br/>
+            EX = DP<br/>
+            EX = SB<br/>
+            DP = EX<br/>
+            SB = EX<br/>
+            SP = W0<br/>
+            R = O<br/>
+            W0 = W<br/> 
+            W1 = W<br/>           
+            EX = X<br/>
+            R = $M<br/>
+            R = *M<br/>
+            R = [M]<br/>
+            R = *[M]<br/>
+            W0 = $M<br/>
+            W1 = $M<br/>
+            EX = $M<br/>
+            $M = R<br/>
+            *M = R<br/>
+            [M] = R<br/>
+            *[M] = R<br/>
+            $M = W0<br/>
+            $M = W1<br/>
+            $M = EX<br/>
+            $M = O<br/>
+            $M = W<br/>
+            $M = X<br/>
+            Notes SWP do not alter the flags
+          </td>
+          <td>--ZN---- (except for SWP)</td>
+        </tr>
+        <tr>
+          <td colspan="4">Other (<span class="count-ins0-other"></span> opcodes)</td>
+        </tr>
+        <tr>
+          <td>IST</td>
+          <td>Instruction set</td>
+          <td>
+            Set lowest 2 bits of ST to lowest 2 bits of operand<br/>
+            IST O
+          </td>
+          <td>CVZNI---</td>
+        </tr>
+        <tr>
+          <td>NOP</td>
+          <td>No operation</td>
+          <td>Waste a CPU cycle</td>
+          <td>--------</td>
+        </tr>
+        <tr>
+          <td>RTI</td>
+          <td>Return from interrupt</td>
+          <td>
+            Pull St and PC<br/>
+            PUL ST;<br/>
+            PUL PC<br/>
+          </td>
+          <td>CVZNI---</td>
+        </tr>
+        <tr>
+          <td colspan="4">Stack (<span class="count-ins0-stack"></span> opcodes)</td>
+        </tr>
+        <tr>
+          <td>MOV</td>
+          <td>Move data</td>
+          <td>
+            R = [O]<br/>
+            [O] = R<br/>
+            W0 = [O]<br/>
+            [O] = W0<br/>
+          </td>
+          <td>--ZN----</td>
+        </tr>
+        <tr>
+          <td>PSH</td>
+          <td>Push on the stack</td>
+          <td>
+            SP &lt; SB executes *FEFFF8 with R0 = 0, R1 = 1 (SP overflow);<br/>
+            $SP = R;<br/>
+            SP = SP - 1;<br/>
+            PSH R<br>
+            A hardware error occurs if the stack overflows.
+          </td>
+          <td>--------</td>
+        </tr>
+        <tr>
+          <td>PUL</td>
+          <td>Pull off the stack</td>
+          <td>
+            SP = SB + 0xFFFF executes *FEFFF8 with R0 = 0, R1 = 2 (SP underflow);<br/>
+            SP = SP + 1;<br/>
+            R = $SP;<br/>
+            PUL R<br>
+            A hardware error occurs if the stack underflows.
+          </td>
+          <td>--ZN----</td>
+        </tr>
+        <tr>
+          <td>SSP</td>
+          <td>Subtract from stack pointer</td>
+          <td>
+            SP = SP - O;<br/>
+            A hardware error occurs if the stack overflows
+          </td>
+          <td>---------</td>
+        </tr>
+        <tr>
+          <td colspan="4">Status (<span class="count-ins0-status"></span> opcodes)</td>
+        </tr>
+        <tr>
+          <td>CLC</td>
+          <td>Clear carry flag</td>
+          <td>Set C = 0</td>
+          <td>C-------</td>
+        </tr>
+        <tr>
+          <td>CLE</td>
+          <td>Clear extended addressing flag</td>
+          <td>Set E = 0</td>
+          <td>-----E--</td>
+        </tr>
+        <tr>
+          <td>CLI</td>
+          <td>Clear hardware interrupt disable flag</td>
+          <td>Set I = 0</td>
+          <td>----I---</td>
+        </tr>
+        <tr>
+          <td>SEC</td>
+          <td>Set carry flag</td>
+          <td>Set C = 1</td>
+          <td>C-------</td>
+        </tr>
+        <tr>
+          <td>SEE</td>
+          <td>Set extended addressing flag</td>
+          <td>Set E = 1</td>
+          <td>-----E--</td>
+        </tr>
+        <tr>
+          <td>SEI</td>
+          <td>Set hardware interrupt disable flag</td>
+          <td>Set I = 1</td>
+          <td>----I---</td>
+        </tr>
+        <tr>
+          <td colspan="4">Unary (<span class="count-ins0-unary"></span> opcodes)</td>
+        </tr>
+        <tr>
+          <td>DEC</td>
+          <td>Decrement</td>
+          <td>
+            R = R - 1;<br/>
+            C = 1 if BIT7(Op1) = 0 and BIT7(Op1 - 1) = 1;<br/>
+            V = 1 if BIT7(Op1) = 1 and BIT7(Op1 - 1) = 0 
+          </td>
+          <td>CVZN----</td>
+        </tr>
+        <tr>
+          <td>INC</td>
+          <td>Increment</td>
+          <td>
+            R = R + 1;<br/>
+            C = 1 if BIT7(Op1) = 1 and BIT7(Op1 + 1) = 0;<br/>
+            V = 1 if BIT7(Op1) = 0 and BIT7(Op1 + 1) = 1<br/>
+          </td>
+          <td>CVZN----</td>
+        </tr>
+        <tr>
+          <td>NEG</td>
+          <td>Negate</td>
+          <td>R = -R</td>
+          <td>--ZN----</td>
+        </tr>
+        <tr>
+          <td>NG1</td>
+          <td>Set to -1</td>
+          <td>
+            CS = -1<br/>
+            IS = -1
+          </td>
+          <td>--ZN-----</td>
+        </tr>
+        <tr>
+          <td>NOT</td>
+          <td>Bitwise NOT</td>
+          <td>R = ~R</td>
+          <td>--ZN----</td>
+        </tr>
+        <tr>
+          <td>ONE</td>
+          <td>Set to 1</td>
+          <td>
+            CS = 1<br/>
+            IS = 1
+          </td>
+          <td>--ZN----</td>
+        </tr>
+        <tr>
+          <td>SLC</td>
+          <td>Shift left with carry</td>
+          <td>
+            R = R &lt;&lt; 1, BIT0(R) = C;<br/>
+            C = BIT7(Op1)
+          </td>
+          <td>C-ZN---</td>
+        </tr>
+        <tr>
+          <td>SRC</td>
+          <td>Shift right with carry</td>
+          <td>
+            R = R &gt;&gt; 1, BIT7(R) = C;<br/>
+            C = BIT0(Op1)
+          </td>
+          <td>C-ZN---</td>
+        </tr>
+        <tr>
+          <td>NXT</td>
+          <td>Add step to register</td>
+          <td>
+            IX = IX + IS<br/>
+            CX = CX + CS;<br/>
+            CVZN are set the same as for ADD;<br/>
+            For NXT IX, if C = 1, depending on the value of N, the DP<br/>
+            is scrolled to the next (N = 0) or previous (N = 1) 64k window.  
+          </td>
+          <td>CVZN----</td>
+        </tr>
+        <tr>
+          <td>ZRO</td>
+          <td>Set to 0</td>
+          <td>
+            IX = 0<br/>
+            CX = 0
+          </td>
+          <td>--ZN----</td>
+        </tr>
+      </tbody>
+    </table>
+    
+    <h2>Branches and Jumps</h2>
+    <p>All branches are relative to the address of the first byte of the next instruction. Relative to the first byte of
+      the branch itself, an 8-bit operand allows a jump in the range of [-126, 129], while a 16-bit operand allows a
+      jump in the range of [-32765, 32770].
+    </p>
+    
+    <h2>Interrupts</h2>
+    <ul>
+      <li>Interrupts can only occur by hardware, there is no instruction to invoke an interrupt.</li>
+      <li>The single non-maskable interrupt cannot be prevented from executing by the interrupt Disable flag.</li>
+      <li>Maskable interrupts can only occur when the Interrupt Disabled flag is clear. Any routine should set this flag
+        at the start of a critical section, and clear it at the end, whether the routine is a main program or an
+        interrupt routine.
+      </li>
+      <li>An interrupt can only occur after the current instruction has completed, and pushes the address of the
+        following instruction.
+      </li>
+      <li>Each interrupt pointer address represents a unique kind of interrupt. Once an interrupt of a given kind is
+        generated, no more interrupts of that kind can be generated until the interrupt routine has completed with an
+        RTI.
+      </li>
+      <li>If multiple interrupts occur during the same instruction execution, one interrupt is chosen by priority.</li>
+      <li>An interrupt routine can be interrupted during a non-critical section by another kind of interrupt of higher
+        priority, but it cannot be interrupted by another kind of interrupt of lower priority.
+      </li>
+      <li>Interrupts push the PC and ST registers in that order.</li>
+      <li>Interrupts must end with an RTI instruction to signal that the interrupt has completed handling. RTI pulls the
+        ST and PC registers in that order.
+      </li>
+      <li>Interrupt routines should only use branches and absolute jumps/jsrs, since relative jumps/jsrs are relative to
+        the CP register, which is not pushed.
+      </li>
+      <li>It is up to the interrupt routine to preserve any other registers it modifies. Since a given kind of
+        interrupt cannot be interrupted by the same kind of interrupt before completion, a given kind of interrupt may
+        use the stack or a reserved memory area dedicated to that specific kind of interrupt to preserve registers
+        and/or hold intermediate values.
+      </li>
+      <li>The following implications occur as a result of the above statements:
+        <ol>
+          <li>Interrupt disable flag handling
+            <ul>
+              <li>Interrupts necessarily push ST with interrupt disable clear</li>
+              <li>Interrupts necessarily restore ST with interrupt disable flag clear</li>
+              <li>Routines do not have to explicitly clear interrupt disable flag before returning</li>
+            </ul>
+          </li>
+          <li>Stack handling</li>
+            <ul>
+              <li>Clearing interrupt disable immediately before returning provides an opportunity to interrupt the
+                current routine just before returning and executoing another interrupt, increasing the size of the
+                stack.
+              </li>
+              <li>Purposely not clearing the interrupt disable flag in the above situation prevents another interrupt
+                from executing until after the registers are pulled from the stack for the current one, reducing stack
+                size.
+              </li>
+            </ul>
+          </li>
+          <li>Main execution and multiple interrupts
+            <ul>
+              <li>If a series of sequential interrupts occur where the routines clear the interrupt disable before
+                returning, the interrupts are nested
+              </li>
+              <li>If a series of sequential interrupts occur where the routines do not clear the interrupt disable flag
+                before returning, the interrupts are chained - as soon as one finishes the next begins.
+              </li>
+              <li>In both cases, the routine being interrupted cannot proceed to execute a single instruction until all
+                other interrupts have been handled - this is true whether the routine being interrupted is itself an
+                interrupt routine or a main program.
+              </li>
+              <li>If one or more lower priority interrupts occur during the execution of a higher priority interrupt,
+                none of the lower priority interrupts occur until the higher priority routine has completed with an RTI.
+              </li> 
+            </ul>
+          </li>
+          <li>Time critical interrupts
+            <ul>
+              <li>A time critical interrupt can begin by setting the interrupt Disable flag, and end with an RTI where
+                there is no explicit clearing of the interrupt Disable flag.</li>
+              <li>Since the first instruction sets interrupt Disable, and the entire routine is a critical section,
+                there is no opportunity for another interrupt to occur, even one of higher priority.</li>
+              <li>Technically, there should be no higher priority interrupts.</li>
+            </ul>
+          </li>
+        </ol>
+      </li>
+    </ul>
+    
+    <h2>General Information</h2>
+    <ol>
+      <li>The processor is little endian - the highest byte is stored first, the lowest byte last</li>
+      <li>8 24-bit interrupt pointers are defined, called INT 0 thru INT 7<br/>
+        INT 7 = non-maskable interrupt pointer, called by hardware reset and hardware errors
+      </li>
+      <li>Interrupts that provide a single byte of data to the routine can simply use the byte following the pointer.</li>
+      <li>On a reset or hardware error, the byte following the INT 7 interrupt pointer has the following values:
+        <ul>
+          <li>On reset bit 0 = 0</li>
+          <li>On hardware errors, bit 0 = 1
+            <ul>
+              <li>Stack overflow sets bit 1 = 0</li>
+              <li>Stack underflow sets bit 1 = 1</li>
+            </ul>
+          </li>
+        </ul>
+      </li>
+      <li>The stack is 64k in size, and can point to any address.</li>
+      <li>The stack base SB is the bottom, the top is SB + 0x00FFFF.</li>
+      <li>If the SB is set to a value > 0xFF0000, then it is possible for the stack to wrap past 0xFFFFFF to 0x000000 if the
+        SP has a large enough value. This can be prevented by setting an appropriate initial value for SP.</li>
+      <li>When an address is pushed on the stack (eg, hardware interrupt, JSR, etc), it is pushed in little endian
+        order, to make it easy to modify addresses on the stack.</li>
+      <li>Since there is no software interrupt instruction, use JSX to call an address containing a JMX instruction that
+        calls the actual routine at an OS defined address. Such a jump table provides well-known addresses for users to
+        call OS routines, while allowing the OS routines to be moved around as they are updated.
+      </li>
+    </ol>
+    
+    <h2>Startup information</h2>
+    <ul>
+      <li>Registers have undefined values on initial hardware reset. They are undefined on startup simply because the
+        user can cause a reset at anytime after startup, in which case the registers will hold whatever values the
+        current routine being interrupted happens to be using.
+      </li>
+      <li>Hardware errors should be handled by killing the current program. In a simple system designed to only run one
+        program at a time, hardware errors can simply do the same thing as a reset.
+      </li>
+      <li>A simple layout is to have OS code, data, jump table, and pointers fit into the last 64k segment:
+        <ul>
+          <li>FF0000 - FFBFFF: 48KB code</li>
+          <li>FFC000 - FFDFFF: 8KB data</li>
+          <li>FFE000 - FFFBFF: 7KB stack space</li>
+          <li>FFFC00 - FFFFDF: 992 bytes for 248 JMX instructions for OS jump table, aligned on 4-byte boundaries
+          <li>FFFFE0 - FFFFFF: 32 bytes for 8 24-bit interrupt pointers, aligned on 4-byte boundaries</li>
+        </ul>
+      </li>
+      <li>Example of CPU executing non-maskable interrupt (INT 7 at FFFFFC - FFFFFE) at startup or any other time, that
+        handles resets and hardware errors in the same way:
+        <ul>
+          <li>FFFFFC = 24-bit address FF0000, so that execution starts at the beginning of the last 64k segment</li>
+          <li>Handler at FF0000 just sets up the stack location with values for ST and PC on it, then execute RTI to
+             call reset routine:
+<pre>
+FF0000: MOV EX, FFE000      ;SB = FFE000
+FF0004: MOV SB, EX
+FF0005: MOV W0, 1BFB        ;SP = 1BFB, FFE000 + 1BFB = FFFBFB, as if 4 bytes have been pushed on stack
+FF0008: MOV SP, W0
+FF0009: MOV $FFFBFC, 0      ;FFFBFC = ST on stack = 0
+FF000D: MOV $FFFBFD, FF0012 ;FFFBFD = PC on stack = FF0012
+FF0011: RTI
+</pre>
+          <li>Reset routine should initialize to known conditions and execute some initial program:
+<pre>
+FF0012: MOV R0, 1      ;CS, IS = 1 
+FF0014: SWP R0, CS
+FF0015: MOV R0, 1
+FF0017: SWP R0, IS
+FF0018: MOV R0, 0      ;R0, R1, R23, R3, CX, IX = 0
+FF001A: MOV R1, R0
+FF001B: MOV R2, R0
+FF001C: MOV R3, R0
+FF001D: ZRO CX
+FF001E: ZRO IX
+FF001F: MOV EX, FF0000 ;CP = FF0000 
+FF0023: MOV CP, EX
+FF0024: MOV EX, FFC000 ;DP = FFC000
+FF0028: MOV DP, EX
+FF0029: MOV EX, FFE000 ;SB = FFE000
+FF002D: MOV SB, EX
+FF002E: MOV W0, 1BFF   ;SP = 1BFF, FFE000 + 1BFF = FFFBFF, as if 0 bytes have been pushed on stack
+FF0031: MOV SP, W0
+FF0032: Set up initial program
+</pre>
+          </li>
+          <li>Note that the kernel jump table could contain an entry that points to FF0012 to allow programs to call the
+            reset function if necessary.
+          </li>
+        </ul> 
+      </li>
+    </ul>
+    
+    <h2>Opcodes</h2>
+    
+    <p>Legend</p>
+    <p>Note: roll mouse over the colours in the legend to highlight the instructions in the table.</p>
+    <table id="legend0">
+      <thead>
+        <tr>
+          <th>Instruction Group</th>
+          <th>Opcodes</th>
+          <th>Colour</th>
+          <th>Instruction Group</th>
+          <th>Opcodes</th>
+          <th>Colour</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Binary</td>
+          <td><span class="count-ins0-binary"></span></td>
+          <td class="ins0-binary"></td>
+          
+          <td>Branch and Jump</td>
+          <td><span class="count-ins0-branch"></span></td>
+          <td class="ins0-branch"></td>
+        </tr>
+        <tr>
+          <td>Move and swap</td>
+          <td><span class="count-ins0-move"></span></td>
+          <td class="ins0-move"></td>
+          
+          <td>Other</td>
+          <td><span class="count-ins0-other"></span></td>
+          <td class="ins0-other"></td>
+        </tr>
+        <tr>
+          <td>Pointer</td>
+          <td><span class="count-ins0-ptr"></span></td>
+          <td class="ins0-ptr"></td>          
+          
+          <td>Stack</td>
+          <td><span class="count-ins0-stack"></span></td>
+          <td class="ins0-stack"></td>
+        </tr>
+        <tr>                    
+          <td>Status</td>
+          <td><span class="count-ins0-status"></span></td>
+          <td class="ins0-status"></td>
+          
+          <td>Unary</td>
+          <td><span class="count-ins0-unary"></span></td>
+          <td class="ins0-unary"></td>
+        </tr>
+      </tbody>
+    </table>
+    
+    <p>Opcodes</p>
+    <table id="opcodes">
+      <thead>
+        <tr>
+          <th></th>
+          <th>0</th>
+          <th>1</th>
+          <th>2</th>
+          <th>3</th>
+          <th>4</th>
+          <th>5</th>
+          <th>6</th>
+          <th>7</th>
+          <th>8</th>
+          <th>9</th>
+          <th>A</th>
+          <th>B</th>
+          <th>C</th>
+          <th>D</th>
+          <th>E</th>
+          <th>F</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th>0</th>
+          <td class="ins0-move">MOV P0,*P1</td>
+          <td class="ins0-move">MOV P0,*(P1)</td>
+          <td class="ins0-move">MOV P0,*[P1]</td>
+          <td class="ins0-move">MOV P0,*([P1])</td>
+          <td class="ins0-move">MOV *P0,P1</td>
+          <td class="ins0-move">MOV *(P0),P1</td>
+          <td class="ins0-move">MOV *[P0],P1</td>
+          <td class="ins0-move">MOV *([P0]),P1</td>
+          <td class="ins0-move">MOV R0,R1</td>
+          <td class="ins0-move">MOV R2,R0</td>
+          <td class="ins0-unary">DEC R0</td>
+          <td class="ins0-unary">DEC R1</td>
+          <td class="ins0-unary">DEC R2</td>
+          <td class="ins0-unary">DEC R3</td>
+          <td class="ins0-branch">BCC B</td>
+          <td class="ins0-branch">BCS B</td>
+        </tr>
+        <tr>
+          <th>1</th>
+          <td class="ins0-move">MOV R0,*P0</td>
+          <td class="ins0-move">MOV R0,*(P0)</td>
+          <td class="ins0-move">MOV R0,*[P0]</td>
+          <td class="ins0-move">MOV R0,*([P0])</td>
+          <td class="ins0-move">MOV R2,*P0</td>
+          <td class="ins0-move">MOV R2,*(P0)</td>
+          <td class="ins0-move">MOV R2,*[P0]</td>
+          <td class="ins0-move">MOV R2,*([P0])</td>
+          <td class="ins0-move">MOV R0,R2</td>
+          <td class="ins0-move">MOV R2,R1</td>
+          <td class="ins0-unary">INC R0</td>
+          <td class="ins0-unary">INC R1</td>
+          <td class="ins0-unary">INC R2</td>
+          <td class="ins0-unary">INC R3</td>
+          <td class="ins0-branch">BVC B</td>
+          <td class="ins0-branch">BVS B</td>
+        </tr>
+        <tr>
+          <th>2</th>
+          <td class="ins0-move">MOV R1,*P0</td>
+          <td class="ins0-move">MOV R1,*(P0)</td>
+          <td class="ins0-move">MOV R1,*[P0]</td>
+          <td class="ins0-move">MOV R1,*([P0])</td>
+          <td class="ins0-move">MOV R3,*P0</td>
+          <td class="ins0-move">MOV R3,*(P0)</td>
+          <td class="ins0-move">MOV R3,*[P0]</td>
+          <td class="ins0-move">MOV R3,*([P0])</td>
+          <td class="ins0-move">MOV R0,R3</td>
+          <td class="ins0-move">MOV R2,R3</td>
+          <td class="ins0-unary">NEG R0</td>
+          <td class="ins0-unary">NEG R1</td>
+          <td class="ins0-unary">NEG R2</td>
+          <td class="ins0-unary">NEG R3</td>
+          <td class="ins0-branch">BNE B</td>
+          <td class="ins0-branch">BEQ B</td>
+        </tr>
+        <tr>
+          <th>3</th>
+          <td class="ins0-move">MOV *P0,R0</td>
+          <td class="ins0-move">MOV *(P0),R0</td>
+          <td class="ins0-move">MOV *[P0],R0</td>
+          <td class="ins0-move">MOV *([P0]),R0</td>
+          <td class="ins0-move">MOV *P0,R2</td>
+          <td class="ins0-move">MOV *(P0),R2</td>
+          <td class="ins0-move">MOV *[P0],R2</td>
+          <td class="ins0-move">MOV *([P0]),R2</td>
+          <td class="ins0-move">MOV R1,R0</td>
+          <td class="ins0-move">MOV R3,R0</td>
+          <td class="ins0-unary">NG1 R0</td>
+          <td class="ins0-unary">NG1 R1</td>
+          <td class="ins0-unary">NG1 R2</td>
+          <td class="ins0-unary">NG1 R3</td>
+          <td class="ins0-branch">BPL B</td>
+          <td class="ins0-branch">BMI B</td>
+        </tr>
+        <tr>
+          <th>4</th>
+          <td class="ins0-move">MOV *P0,R1</td>
+          <td class="ins0-move">MOV *(P0),R1</td>
+          <td class="ins0-move">MOV *[P0],R1</td>
+          <td class="ins0-move">MOV *([P0]),R1</td>
+          <td class="ins0-move">MOV *P0,R3</td>
+          <td class="ins0-move">MOV *(P0),R3</td>
+          <td class="ins0-move">MOV *[P0],R3</td>
+          <td class="ins0-move">MOV *([P0]),R3</td>
+          <td class="ins0-move">MOV R1,R2</td>
+          <td class="ins0-move">MOV R3,R1</td>
+          <td class="ins0-unary">NOT R0</td>
+          <td class="ins0-unary">NOT R1</td>
+          <td class="ins0-unary">NOT R2</td>
+          <td class="ins0-unary">NOT R3</td>
+          <td class="ins0-branch">JMP *[P0]</td>
+          <td class="ins0-branch">JMP B</td>
+        </tr>
+        <tr>
+          <th>5</th>
+          <td class="ins0-move">MOV R0,SB</td>
+          <td class="ins0-move">MOV R0,SP</td>
+          <td class="ins0-move">MOV R0,SL</td>
+          <td class="ins0-move">MOV R0,DP</td>
+          <td class="ins0-move">MOV R0,CO0</td>
+          <td class="ins0-move">MOV R0,CO1</td>
+          <td class="ins0-move">MOV R0,CS0</td>
+          <td class="ins0-move">MOV R0,CS1</td>
+          <td class="ins0-move">MOV R1,R3</td>
+          <td class="ins0-move">MOV R3,R2</td>
+          <td class="ins0-unary">ONE R0</td>
+          <td class="ins0-unary">ONE R1</td>
+          <td class="ins0-unary">ONE R2</td>
+          <td class="ins0-unary">ONE R3</td> 
+          <td class="ins0-branch">JMP W</td>
+          <td class="ins0-branch">JMP DW</td>
+        </tr>
+        <tr>
+          <th>6</th>
+          <td class="ins0-move">MOV SB,R0</td>
+          <td class="ins0-move">MOV SP,R0</td>
+          <td class="ins0-move">MOV SL,R0</td>
+          <td class="ins0-move">MOV DP,R0</td>
+          <td class="ins0-move">MOV CO0,R0</td>
+          <td class="ins0-move">MOV CO1,R0</td>
+          <td class="ins0-move">MOV CS0,R0</td>
+          <td class="ins0-move">MOV CS1,R0</td>
+          <td class="ins0-move">SWP R0,R1</td>
+          <td class="ins0-move">SWP R1,R2</td>
+          <td class="ins0-unary">SLC R0</td>
+          <td class="ins0-unary">SLC R1</td>
+          <td class="ins0-unary">SLC R2</td>
+          <td class="ins0-unary">SLC R3</td>     
+          <td class="ins0-branch">JSR *(P0)</td>
+          <td class="ins0-branch">JSR *(P1)</td>
+        </tr>
+        <tr>
+          <th>7</th>
+          <td class="ins0-binary">ADC R0,R1</td>
+          <td class="ins0-binary">ADC R2,R3</td>
+          <td class="ins0-binary">ADC R0,O</td>
+          <td class="ins0-binary">ADC R1,O</td>
+          <td class="ins0-binary">ADC R2,O</td>
+          <td class="ins0-binary">ADC R3,O</td>
+          <td class="ins0-move">MOV R0,ST</td>
+          <td class="ins0-move">MOV R1,O</td>
+          <td class="ins0-move">SWP R0,R2</td>
+          <td class="ins0-move">SWP R1,R3</td>
+          <td class="ins0-unary">SRC R0</td>
+          <td class="ins0-unary">SRC R1</td>
+          <td class="ins0-unary">SRC R2</td>
+          <td class="ins0-unary">SRC R3</td>
+          <td class="ins0-branch">JSR *([P0])</td>
+          <td class="ins0-branch">JSR *([P1])</td>
+        </tr>
+        <tr>
+          <th>8</th>
+          <td class="ins0-binary">AND R0,R1</td>
+          <td class="ins0-binary">AND R2,R3</td>
+          <td class="ins0-binary">AND R0,O</td>
+          <td class="ins0-binary">AND R1,O</td>
+          <td class="ins0-binary">AND R2,O</td>
+          <td class="ins0-binary">AND R3,O</td>
+          <td class="ins0-move">MOV ST,R0</td>
+          <td class="ins0-move">MOV R2,O</td>
+          <td class="ins0-move">SWP R0,R3</td>
+          <td class="ins0-move">SWP R2,R3</td>
+          <td class="ins0-unary">ZRO R0</td>
+          <td class="ins0-unary">ZRO R1</td>
+          <td class="ins0-unary">ZRO R2</td>
+          <td class="ins0-unary">ZRO R3</td>
+          <td class="ins0-branch">JSR *(*P0)</td>
+          <td class="ins0-branch">JSR *(*P1)</td>
+        </tr>
+        <tr>
+          <th>9</th>
+          <td class="ins0-binary">CMP R0,R1</td>
+          <td class="ins0-binary">CMP R2,R3</td>
+          <td class="ins0-binary">CMP R0,O</td>
+          <td class="ins0-binary">CMP R1,O</td>
+          <td class="ins0-binary">CMP R2,O</td>
+          <td class="ins0-binary">CMP R3,O</td>
+          <td class="ins0-move">MOV R0,O</td>
+          <td class="ins0-move">MOV R3,O</td>
+          <td class="ins0-move">MOV R0,P0</td>
+          <td class="ins0-move">MOV P0,R0</td>
+          <td class="ins0-unary">NG1 CO0</td>
+          <td class="ins0-unary">NG1 CO1</td>
+          <td class="ins0-unary">ONE CO0</td>
+          <td class="ins0-unary">ONE CO1</td>
+          <td class="ins0-branch">JSR *(*[P0])</td>
+          <td class="ins0-branch">JSR *(*[P1])</td>
+        </tr>
+        <tr>
+          <th>A</th>
+          <td class="ins0-binary">MD R0,R1</td>
+          <td class="ins0-binary">MD R2,R3</td>
+          <td class="ins0-binary">MD R0,O</td>
+          <td class="ins0-binary">MD R1,O</td>
+          <td class="ins0-binary">MD R2,O</td>
+          <td class="ins0-binary">MD R3,O</td>
+          <td class="ins0-stack">PSH R0</td>
+          <td class="ins0-stack">PUL R0</td>
+          <td class="ins0-move">MOV PM0,O</td>
+          <td class="ins0-move">MOV PM1,O</td>
+          <td class="ins0-unary">NG1 CS0</td>
+          <td class="ins0-unary">NG1 CS1</td>
+          <td class="ins0-unary">ONE CS0</td>
+          <td class="ins0-unary">ONE CS1</td>
+          <td class="ins0-branch">JSA *DW</td>
+          <td class="ins0-branch">JSR B</td>
+        </tr>
+        <tr>
+          <th>B</th>
+          <td class="ins0-binary">OR R0,R1</td>
+          <td class="ins0-binary">OR R2,R3</td>
+          <td class="ins0-binary">OR R0,O</td>
+          <td class="ins0-binary">OR R1,O</td>
+          <td class="ins0-binary">OR R2,O</td>
+          <td class="ins0-binary">OR R3,O</td>
+          <td class="ins0-stack">PSH R1</td>
+          <td class="ins0-stack">PUL R1</td>
+          <td class="ins0-move">SWP PTR0,PTR1</td>
+          <td class="ins0-status">CLC</td>
+          <td class="ins0-unary">NXT CO0</td>
+          <td class="ins0-unary">NXT CO1</td>
+          <td class="ins0-unary">ZRO CO0</td>
+          <td class="ins0-unary">ZRO CO1</td>
+          <td class="ins0-branch">JSR W</td>
+          <td class="ins0-branch">JSR DW</td>
+        </tr>
+        <tr>
+          <th>C</th>
+          <td class="ins0-binary">SBB R0,R1</td>
+          <td class="ins0-binary">SBB R2,R3</td>
+          <td class="ins0-binary">SBB R0,O</td>
+          <td class="ins0-binary">SBB R1,O</td>
+          <td class="ins0-binary">SBB R2,O</td>
+          <td class="ins0-binary">SBB R3,O</td>
+          <td class="ins0-stack">PSH R2</td>
+          <td class="ins0-stack">PUL R2</td>
+          <td class="ins0-status">SEC</td>
+          <td class="ins0-status">OST0</td>
+          <td class="ins0-unary">NXT PTR0</td>
+          <td class="ins0-unary">NXT PTR1</td>
+          <td class="ins0-unary">NUL R0</td>
+          <td class="ins0-unary">NUL P0</td>
+          <td class="ins0-branch">RTS</td>
+          <td class="ins0-branch">RTS O</td>
+        </tr>
+        <tr>
+          <th>D</th>
+          <td class="ins0-binary">SHL R0,R1</td>
+          <td class="ins0-binary">SHL R2,R3</td>  
+          <td class="ins0-binary">SHL R0,B</td>
+          <td class="ins0-binary">SHL R1,B</td>
+          <td class="ins0-binary">SHL R2,B</td>
+          <td class="ins0-binary">SHL R3,B</td>
+          <td class="ins0-stack">PSH R3</td>
+          <td class="ins0-stack">PUL R3</td>
+          <td class="ins0-status">CLI</td>
+          <td class="ins0-status">OST1</td>
+          <td class="ins0-ptr">PTR0 R0</td>
+          <td class="ins0-ptr">PTR0 R0,I,S,M</td>
+          <td class="ins0-ptr">PTR0 A</td>
+          <td class="ins0-ptr">PTR0 [O]</td>
+          <td class="ins0-ptr">PTR0 [O],I,S,M</td>
+          <td class="ins0-ptr">PTR0 [O],L,I,S,M</td>
+        </tr>
+        <tr>
+          <th>E</th>
+          <td class="ins0-binary">SHR R0,R1</td>
+          <td class="ins0-binary">SHR R2,R3</td>  
+          <td class="ins0-binary">SHR R0,B</td>
+          <td class="ins0-binary">SHR R1,B</td>
+          <td class="ins0-binary">SHR R2,B</td>
+          <td class="ins0-binary">SHR R3,B</td>
+          <td class="ins0-stack">PSH ST</td>
+          <td class="ins0-stack">PUL ST</td>
+          <td class="ins0-status">SEI</td>
+          <td class="ins0-status">RST0</td>
+          <td class="ins0-status">RST1</td>
+          <td class="ins0-ptr">PTR0 R0,L,I,S,M</td>
+          <td class="ins0-ptr">PTR0 A,I,S,M</td>
+          <td class="ins0-ptr">PTR0 A,L,I,S,M</td>
+          <td class="ins0-other">TST DW,B</td>
+          <td class="ins0-other">RTI</td>
+        </tr>
+        <tr>
+          <th>F</th>
+          <td class="ins0-binary">XOR R0,R1</td>
+          <td class="ins0-binary">XOR R2,R3</td>  
+          <td class="ins0-binary">XOR R0,O</td>
+          <td class="ins0-binary">XOR R1,O</td>
+          <td class="ins0-binary">XOR R2,O</td>
+          <td class="ins0-binary">XOR R3,O</td>
+          <td class="ins0-binary">EQL P0,P1</td>
+          <td class="ins0-stack">SSP O</td> 
+          <td class="ins0-stack">PSH PTR0</td>
+          <td class="ins0-stack">PUL PTR0</td>
+          <td class="ins0-status">SIZE0</td>
+          <td class="ins0-status">SIZE1</td>
+          <td class="ins0-status">SIZE2</td>
+          <td class="ins0-status">SIZE3</td>
+          <td class="ins0-other">SET DW,B,B</td>
+          <td class="ins0-other">NOP</td>
+        </tr>
+      </tbody>
+    </table>
+  </body>
+</html>

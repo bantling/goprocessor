@@ -1,0 +1,97 @@
+A microprocessor
+----------------
+
+A microprocessor that is intended only for a virtual environment.
+
+. 4 Register Sets containing:
+.. General Purpose Register R (64-bit signed/unsigned)
+.. Pointer Register PTR (32-bit unsigned)
+.. Offset Register OFS (16-bit unsigned)
+.. Index Register IX (16-bit unsigned)
+.. Index Step Register IS (16-bit signed)
+. 4 Counter Register CTR (32-bit unsigned)
+. 4 Counter Step Registers CS (16-bit signed)
+. 4 Timer Registers TMR (32-bit unsigned)
+.. Max 32-bit unsigned value is 4,294,967,295
+.. Millisecond precision, so max value = 4,294,967.295 seconds = 71,582.788 minutes = 1193.05 hours = 49.71 days
+. 4 Timer Pointer Registers TPTR (32-bit)
+. 1 Program Counter PC (32-bit)
+. 1 Code Pointer CP (32-bit)
+. 1 Stack Base Register SB (32-bit, lowest address)
+. 1 Stack Limit Register SL (32-bit, highest address)
+. 1 Stack Pointer Register SP (32-bit, current address)
+. 1 Status Register ST (16-bit)
+.. CP is base address of a program
+.. The PTR, TPTR, PC, SB, SL, and SP registers are all relative to CP
+.. All branches and jumps are relative to CP except JMPA/JSRA, to allow for a kernel jump table
+.. Programs are relocatable
+. 1 Interrupt Disable bit in memory location 0
+. ST layout
+.. CVZNAAAJ WWRROODD
+.. Carry, oVerflow, Zero, Negative, Address mode, Jump mode
+.. Write register set, Read register set, Operand mode, Decimal mode
+.. Address Mode (assume PTR = 100, OFS = 25, IX = 400, address 100 has 32 bit pointer to address 200)
+... 000 = PTR: PTR = 100
+... 001 = (PTR): PTR + OFS = 100 + 25 = 125
+... 010 = [PTR]: PTR + IX = 100 + 400 = 500
+... 011 = ([PTR]): PTR + IX + OFS = 100 + 400 + 25 = 525
+... 100 = *PTR: *PTR = 200
+... 101 = (*PTR): *PTR + OFS = 200 + 25 = 225
+... 110 = [*PTR]: *PTR + IX = 200 + 400 = 600
+... 111 = ([*PTR]): *PTR + IX + OFS = 200 + 400 + 25 = 625
+... The * address modes always read a 32 bit pointer, they don't depend on the jump mode
+.. Jump size is short (J = 0: branch 8 bits, jump 16 bits) or long (J = 1: branch 16 bits, jump 32 bits)
+.. Branches and jumps are signed, except for JMPA and JSRA which are unsigned absolute addresses
+.. Write/Read register set = Register set(s) to use for an instruction
+.. Computation instructions work on selected Write/Read general registers, referred to as W and R
+.. Operand size
+... 00 = 8 bits
+... 01 = 16 bits
+... 10 = 32 bits
+... 11 = 64 bits
+.. Decimal Mode (Fixed and Floating Point are 16 bits for Operand Size 00)
+... 00 = Integer
+... 01 = Fractional
+... 10 = Fixed Point
+... 11 = Floating Point
+.. In Floating Point Mode:
+... Carry = NaN
+... Zero = Divide By Zero
+. Integer math
+.. Carry Flag = 1 is carry for ADC, borrow for SBC, modulo for DIV, no meaning for MUL
+.. Each of the relevant CVZN flags are modified on each instruction
+.. EG, if only the CV flags are relevant to an instruction, then only those two are modified
+. Fractional math
+.. 
+. Fixed point math
+.. When operand size is 8 or 16 bits, use 16 bits, 32 bits = 32 bits, 64 bits = 64 bits
+.. Scaling factor and min/max range limited to decimal values
+... 16 bits: scaling factor = 10^-2, range = +/-99.99
+... 32 bits: scaling factor = 10^-4, range = +/-99,999.9999
+... 64 bits: scaling factor = 10^-8, range = +/-99,999,999,999.99999999
+.. Existing ADC, DIV, MUL, SBC, CMP become fixed point instructions
+... VZN flags have same meaning as integer instructions
+... Carry Flag = 1 has no meaning in ADC, SBC, and MUL, indicates modulo for DIV
+. Floating point instructions
+.. When operand size is 8 or 16 bits, use Half Precision, 32 bits = Single Precision, 64 bits = Double Precision
+.. Existing ADC, DIV, MUL, SBC, CMP become FP instructions
+... Carry Flag = 1 has no meaning in ADC, SBC, and MUL, indicates modulo for DIV
+.. Unary
+... FS2F - signed integer to floating point: W(int -> float) 
+... FF2S - floating point to signed integer: W(float -> int)
+... FU2F - unsigned integer to floating point: W(uint -> float)
+... FF2U - floating point to unsigned integer: W(float -> uint)
+... FABS - absolute value: W = ABS(W)
+... FCEL = ceiling: W = CEIL(W)
+... FFLR = floor: W = FLOOR(W)
+.. Binary
+... FPOW - power: W = W ^ R
+... FCOS - cosine: W = COS\(R)
+... FSIN - sine: W = SIN\(R)
+... FTAN - tangent: W = TAN\(R)
+... FACS - arc cosine: W = ACOS\(R)
+... FASN - arc sine: W = ASIN\(R)
+... FATN - arc tangent: W = ATAN\(R)
+... FLOG - logarithm base 10: W = LOG10\(R)
+... FNLG - natural logarithm: W = LOGe\(R)
+... FSQR - square root: W = SQRT\(R)
