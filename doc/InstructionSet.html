@@ -477,11 +477,7 @@
         </tr>
         <tr>
           <td>CTR0 - CTR3</td>
-          <td>32 bit unsigned counter</td>
-        </tr>
-        <tr>
-          <td>CS0 - CS3</td>
-          <td>16 bit signed counter step</td>
+          <td>32 bit unsigned counters that count backwards to 0</td>
         </tr>
         <tr>
           <td>TMR0 - TMR3</td>
@@ -896,10 +892,6 @@
             Pull CTR1<br>
             Pull CTR2<br>
             Pull CTR3<br>
-            Pull CS0<br>
-            Pull CS1<br>
-            Pull CS2<br>
-            Pull CS3<br>
             Pull CP<br>
             Pull PC<br>
             Pull SB<br>
@@ -1032,10 +1024,6 @@
             PSH CTR1<br>
             PSH CTR2<br>
             PSH CTR3<br>
-            PSH CS0<br>
-            PSH CS1<br>
-            PSH CS2<br>
-            PSH CS3<br>
             PSH ST<br>
           </td>
           <td>-------- --------</td>
@@ -1072,10 +1060,6 @@
             PUL CTR1<br>
             PUL CTR2<br>
             PUL CTR3<br>
-            PUL CS0<br>
-            PUL CS1<br>
-            PUL CS2<br>
-            PUL CS3<br>
             PUL ST<br>
           </td>
           <td>--ZN---- --------</td>
@@ -1125,8 +1109,13 @@
           <td>Decrement</td>
           <td>
             W = W - 1<br>
+            CTR0 = CTR0 - 1<br>
+            CTR1 = CTR1 - 1<br>
+            CTR2 = CTR2 - 1<br>
+            CTR3 = CTR3 - 1<br>
             C = 1 if (H(W) = 0) and (H(W') = 1)<br>
-            V = 1 if (H(W) = 1) and (H(W') = 0)
+            V = 1 if (H(W) = 1) and (H(W') = 0)<br>
+            Only the Zero flag is set for counters
           </td>
           <td>CVZN---- --------</td>
         </tr>
@@ -1153,10 +1142,6 @@
             W = -1<br>
             WIS = -1<br>
             RIS = -1<br>
-            CS0 = -1<br>
-            CS1 = -1<br>
-            CS2 = -1<br>
-            CS3 = -1
           </td>
           <td>--ZN----- --------</td>
         </tr>
@@ -1172,10 +1157,6 @@
           <td>
             WIX = WIX + WIS<br>
             RIX = RIX + RIS<br>
-            CTR0 = CTR0 + CS0<br>
-            CTR1 = CTR1 + CS1<br>
-            CTR2 = CTR2 + CS2<br>
-            CTR3 = CTR3 + CS3<br>
             CVZN are set the same as for ADC
           </td>
           <td>CVZN---- --------</td>
@@ -1189,14 +1170,6 @@
             WIS = 1<br>
             RIX = 1<br>
             RIS = 1<br>
-            CTR0 = 1<br>
-            CS0 = 1<br>
-            CTR1 = 1<br>
-            CS1 = 1<br>
-            CTR2 = 1<br>
-            CS2 = 1<br>
-            CTR3 = 1<br>
-            CS3 = 1
           </td>
           <td>--ZN---- --------</td>
         </tr>
@@ -1239,14 +1212,6 @@
             WIS = 0<br>
             RIX = 0<br>
             RIS = 0<br>
-            CTR0 = 0<br>
-            CS0 = 0<br>
-            CTR1 = 0<br>
-            CS1 = 0<br>
-            CTR2 = 0<br>
-            CS2 = 0<br>
-            CTR3 = 0<br>
-            CS3 = 0<br>
           </td>
           <td>--ZN---- --------</td>
         </tr>
@@ -1694,66 +1659,66 @@ FF0032: Set up initial program
         <tr>
           <th>9</th>
           <td class="ins0-unary">DEC W</td>
+          <td class="ins0-unary">DEC CTR0</td>
+          <td class="ins0-unary">DEC CTR1</td>
+          <td class="ins0-unary">DEC CTR2</td>
+          <td class="ins0-unary">DEC CTR3</td>
           <td class="ins0-unary">INC W</td>
           <td class="ins0-unary">NEG W</td>
           <td class="ins0-unary">NG1 W</td>
           <td class="ins0-unary">NG1 WIS</td>
           <td class="ins0-unary">NG1 RIS</td>
-          <td class="ins0-unary">NG1 CS0</td>
-          <td class="ins0-unary">NG1 CS1</td>
-          <td class="ins0-unary">NG1 CS2</td>
-          <td class="ins0-unary">NG1 CS3</td>
           <td class="ins0-unary">NOT W</td>
           <td class="ins0-unary">NXT WIX</td>
           <td class="ins0-unary">NXT RIX</td>
-          <td class="ins0-unary">NXT CTR0</td>
+          <td class="ins0-unary">ONE W</td>
           <td class="ins0-branch">JSR O</td>
           <td class="ins0-branch">JMA O</td>
         </tr>
         <tr>
           <th>A</th>
-          <td class="ins0-unary">NXT CTR1</td>
-          <td class="ins0-unary">NXT CTR2</td>
-          <td class="ins0-unary">NXT CTR3</td>
-          <td class="ins0-unary">ONE W</td>
           <td class="ins0-unary">ONE WIX</td>
           <td class="ins0-unary">ONE WIS</td>
           <td class="ins0-unary">ONE RIX</td>
           <td class="ins0-unary">ONE RIS</td>
-          <td class="ins0-unary">ONE CTR0</td>
-          <td class="ins0-unary">ONE CS0</td>
-          <td class="ins0-unary">ONE CTR1</td>
-          <td class="ins0-unary">ONE CS1</td>
-          <td class="ins0-unary">ONE CTR2</td>
-          <td class="ins0-unary">ONE CS2</td>
-          <td class="ins0-branch">RTI</td>
-          <td class="ins0-branch">JMCP W</td>
-        </tr>
-        <tr>
-          <th>B</th>
-          <td class="ins0-unary">ONE CTR3</td>
-          <td class="ins0-unary">ONE CS3</td>
-          <td class="ins0-unary">SHLC W</td>
-          <td class="ins0-unary">SHRC W</td>
-          <td class="ins0-unary">SHAC W</td>
+          <td class="ins0-unary">SHLC</td>
+          <td class="ins0-unary">SHRC</td>
+          <td class="ins0-unary">SHAC</td>
           <td class="ins0-unary">ZRO W</td>
           <td class="ins0-unary">ZRO WIX</td>
           <td class="ins0-unary">ZRO WIS</td>
           <td class="ins0-unary">ZRO RIX</td>
           <td class="ins0-unary">ZRO RIS</td>
-          <td class="ins0-unary">ZRO CTR0</td>
-          <td class="ins0-unary">ZRO CS0</td>
-          <td class="ins0-unary">ZRO CTR1</td>
-          <td class="ins0-unary">ZRO CS1</td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-branch">RTI</td>
+          <td class="ins0-branch">JMCP W</td>
+        </tr>
+        <tr>
+          <th>B</th>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
           <td class="ins0-branch">RTS</td>
           <td class="ins0-branch">JMCP O</td>
         </tr>
         <tr>
           <th>C</th>
-          <td class="ins0-unary">ZRO CTR2</td>
-          <td class="ins0-unary">ZRO CS2</td>
-          <td class="ins0-unary">ZRO CTR3</td>
-          <td class="ins0-unary">ZRO CS2</td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
