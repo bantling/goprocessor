@@ -457,53 +457,41 @@
       <tbody>
         <tr>
           <td>R0 - R3</td>
-          <td>64 bit signed General purpose registers</td>
+          <td>64 bit signed general purpose registers that work in pairs</td>
         </tr>
         <tr>
-          <td>PTR0 - PTR3</td>
-          <td>32 bit unsigned Pointer registers</td>
+          <td>PTR0, PTR1</td>
+          <td>32 bit unsigned pointer registers</td>
         </tr>
         <tr>
-          <td>OFS0 - OFS3</td>
-          <td>16 bit unsigned Offset registers</td>
+          <td>OFS0, OFS1</td>
+          <td>16 bit unsigned offset registers</td>
         </tr>
         <tr>
-          <td>IX0 - IX3</td>
-          <td>16 bit unsigned Index registers</td>
+          <td>IX0, IX1</td>
+          <td>16 bit unsigned index registers</td>
         </tr>
         <tr>
-          <td>IS0 - IS3</td>
-          <td>16 bit signed Index Step registers</td>
+          <td>IS0, IS1</td>
+          <td>16 bit signed index step registers</td>
         </tr>
         <tr>
-          <td>CTR0 - CTR3</td>
-          <td>32 bit unsigned counters that count backwards to 0</td>
+          <td>CTR0, CTR1</td>
+          <td>32 bit unsigned counter registers that count backwards to 0</td>
         </tr>
         <tr>
-          <td>TMR0 - TMR3</td>
-          <td>
-              32 bit unsigned Timer Interrupt with millisecond precision<br>
-              Max value = 4,294,967.295 seconds = 71,582.788 minutes = 1193.05 hours = 49.71 days<br>
-              A value of zero disables the timer
-          </td>
-        </tr>
-        <tr>
-          <td>TPTR0 - TPTR3</td>
-          <td>32 bit unsigned Timer Pointer</td>
+          <td>CS0, CS1</td>
+          <td>32 bit unsigned counter step registers</td>
         </tr>
         <tr>
           <td>CP</td>
           <td>
-            32 bit unsigned code pointer<br>
-            The PTR, PC, SB, SL, and SP registers are all relative to CP<br>
-            This effectively makes all reads and writes are relative to CP<br>
-            This allows programs to be relocatable<br>
-            Only the TPTR registers are absolute, so that they can trigger OS routines
+            32 bit unsigned code pointer.<br>
+            The PTR, PC, SB, SL, and SP registers are all relative to CP.<br>
+            This effectively makes all reads and writes are relative to CP.<br>
+            This allows programs to be relocatable.<br>
+            Only the TPTR registers are absolute, so that they can trigger OS routines.
           </td>
-        </tr>
-        <tr>
-          <td>PC</td>
-          <td>32 bit unsigned program counter</td>
         </tr>
         <tr>
           <td>SB</td>
@@ -518,10 +506,14 @@
           <td>32 bit unsigned stack pointer</td>
         </tr>
         <tr>
+          <td>PC</td>
+          <td>32 bit unsigned program counter</td>
+        </tr>
+        <tr>
           <td>ST</td>
-          <td>16 bit status register, consists of CVZNAAAI WWRROODD:<br>
+          <td>16 bit status register, consists of CVZNAAAI RRPTOOMM:<br>
               Carry, oVerflow, Zero, Negative, Address mode, Interrupt Disable,<br>
-              Write register set, Read register set, Operand mode, Decimal mode.
+              Register, Pointer register, counTer register, Operand size, Math mode
           </td>
         </tr>
       </tbody>
@@ -571,21 +563,27 @@
           <td>Interrupt Disable</td>
         </tr>
         <tr>
-          <td>WW</td>
+          <td>RR</td>
           <td>
-            Write Register, selects which general register to write to
+            Select a general purpose register
           </td>
         </tr>
         <tr>
-          <td>RR</td>
+          <td>P</td>
           <td>
-            Read Register, selects which general register to read from
+            Select a pointer register set (PTR, OFS, IX, IS)
+          </td>
+        </tr>
+        <tr>
+          <td>T</td>
+          <td>
+            Select a counter register set (CTR, CS)
           </td>
         </tr>
         <tr>
           <td>OO</td>
           <td>
-            Operand Mode<br>
+            Operand Size<br>
             00: 8 bits<br>
             01: 16 bits<br>
             10: 32 bits<br>
@@ -593,9 +591,9 @@
           </td>
         </tr>
         <tr>
-          <td>DD</td>
+          <td>MM</td>
           <td>
-            Decimal Mode<br>
+            Math Mode<br>
             00 = Integer<br>
             01 = Fractional<br>
             10 = Fixed Point<br>
@@ -644,15 +642,19 @@
     
     <h2>Instructions</h2>
     <ul>
-      <li>W = Selected Write Register</li>
-      <li>R = Selected Read Register</li>
-      <li>RW = Selected Read Register used for both reads and writes</li>
-      <li>WIX = Selected Write Index Register</li>
-      <li>WIS = Selected Write Index Step Register</li>
-      <li>RIX = Selected Write Index Register</li>
-      <li>RIS = Selected Read Index Step Register</li>
+      <li>R = Selected general purpose register</li>
+      <li>Rc = Complement of selected general purpose register</li>
+      <li>PTR = Selected pointer register</li>
+      <li>*PTR = Selected pointer register data in current addressing mode</li>
+      <li>OFS = Selected offset register</li>
+      <li>IX = Selected index register</li>
+      <li>IS = Selected index step register</li>
+      <li>CTR = Selected counter register</li>
+      <li>CS = Selected counter step register</li>
+      <li>OP1,OP2 = Operands of last CMP instruction</li>
+      <li>Ir = Input register or data</li>
+      <li>Or = Output register</li>
       <li>H = Highest bit, depends on operand size (bit 7, 15, 31, or 63)</li>
-      <li>W' = Write Register value after the instruction has completed</li>
     </ul>
     <table>
       <thead>
@@ -671,44 +673,51 @@
           <td>ADC</td>
           <td>Add with carry</td>
           <td>
-            W = W + R + C<br>
-            C = 1 if (H(W) = 1 or H(R) = 1) and (H(W + R + C) = 0)<br>
-            V = 1 if (H(W) = H(R)) and (H(W) != H(W + R + C))
+            R = R + Rc + C<br>
+            R = R + R + *PTR<br>
+            C = 1 if (H(Or) = 1 or H(Ir) = 1) and (H(Ow + Ir + C) = 0)<br>
+            V = 1 if (H(Or) = H(Ir)) and (H(Or) != H(Or + Ir + C))
           </td>
           <td>CVZN---- --------</td>
         </tr>
         <tr>
           <td>AND</td>
           <td>Bitwise AND</td>
-          <td>W = W & R</td>
+          <td>
+            R = R & Rc<br>
+            R = R & *PTR
+          </td>
           <td>--ZN---- --------</td>
         </tr>
         <tr>
           <td>CMP</td>
           <td>Compare</td>
           <td>
-            CMP Rx,Ry<br>
-            C = 1 if Rx &gt;= Ry unsigned<br>
-            V = 1 if Rx &gt;= Ry signed<br>
-            Z = 1 if Rx = Ry<br>
-            Unlike other binary instructions, CMP does not use W and R status flags.<br>
-            Instead, there is a different CMP for each pair of Rx, Ry where x != y.
+            CMP R, Rc<br>
+            CMP R, *PTR<br>
+            C = 1 if R &gt;= Rc/*PTR unsigned<br>
+            V = 1 if R &gt;= Rc/*PTR signed<br>
+            Z = 1 if R = Rc/*PTR
           </td>
           <td>CVZ----- --------</td>
         </tr>
         <tr>
           <td>OR</td>
           <td>Bitwise OR</td>
-          <td>W = W | R</td>
+          <td>
+            R = R | Rc<br>
+            R = R | *PTR
+          </td>
           <td>--ZN---- --------</td>
         </tr>
         <tr>
           <td>SBB</td>
           <td>Subtract with borrow</td>
           <td>
-            W = W - R - C<br>
-            C = 1 if (R + C) > W unsigned<br>
-            V = 1 if (H(W) != H(R)) and (H(R) = H(W - R - C))<br>
+            R = R - Rc - C<br>
+            R = R - *PTR - C<br>
+            C = 1 if (Rc/*PTR + C) > Or unsigned<br>
+            V = 1 if (H(Or) != H(Ir)) and (H(Rc/*PTR) = H(R - Rc/*PTR - C))<br>
           </td>
           <td>CVZN---- --------</td>
         </tr>
@@ -716,8 +725,8 @@
           <td>SHL</td>
           <td>Shift bits left</td>
           <td>
-            W = W &lt;&lt; R<br>
-            C = 1 if any of the upper R bits of W are set
+            R = R &lt;&lt; Rc<br>
+            C = 1 if any of the upper Rc bits of R are set
           </td>
           <td>C-ZN---- --------</td>
         </tr>
@@ -725,8 +734,8 @@
           <td>SHR</td>
           <td>Shift bits right</td>
           <td>
-            W = W &gt;&gt; R<br>
-            C = 1 if any of the lower R bits of W are set
+            R = R &gt;&gt; Rc<br>
+            C = 1 if any of the lower Rc bits of R are set
           </td>
           <td>C-ZN---- --------</td>
         </tr>
@@ -734,16 +743,19 @@
           <td>SHA</td>
           <td>Shift bits right, arithmetic</td>
           <td>
-            W = W &gt;&gt; R<br>
-            Highest R bits of W' = H(W), causing the sign of W to remain the same<br>
-            C = 1 if any of the lower R bits of W are set
+            R = R &gt;&gt; Rc<br>
+            Highest Rc bits of R &gt;&gt; Rc = H(R), causing the sign of R to remain the same<br>
+            C = 1 if any of the lower Rc bits of R are set
           </td>
           <td>C-ZN---- --------</td>
         </tr>
         <tr>
           <td>XOR</td>
           <td>Bitwise XOR</td>
-          <td>W = W ^ R</td>
+          <td>
+            R = R ^ Rc<br>
+            R = R ^ *PTR
+          </td>
           <td>--ZN---- --------</td>
         </tr>
         <tr>
@@ -751,7 +763,7 @@
         </tr>
         <tr>
           <td>BCC (BLTU, BNANC)</td>
-          <td>Branch on carry clear (Rx &lt; Ry unsigned, FP result is not NaN)</td>
+          <td>Branch on carry clear (Op1 &lt; Op2 unsigned, FP result is not NaN)</td>
           <td>
             PC = PC + O if C = 0
           </td>
@@ -759,7 +771,7 @@
         </tr>
         <tr>
           <td>BCS (BGEU, BNANS)</td>
-          <td>Branch on carry set (Rx &gt;= Ry unsigned, FP result is NaN)</td>
+          <td>Branch on carry set (Op1 &gt;= Op2 unsigned, FP result is NaN)</td>
           <td>
             PC = PC + O if C = 1
           </td>
@@ -767,7 +779,7 @@
         </tr>
         <tr>
           <td>BEQ</td>
-          <td>Branch on equal to zero (Rx = Ry)</td>
+          <td>Branch on equal to zero (Op1 = Op2)</td>
           <td>
             PC = PC + O if Z = 1
           </td>
@@ -783,7 +795,7 @@
         </tr>
         <tr>
           <td>BNE</td>
-          <td>Branch on not equal to zero (Rx != Ry)</td>
+          <td>Branch on not equal to zero (Op1 != Op2)</td>
           <td>
             PC = PC + O if Z = 0
           </td>
@@ -799,7 +811,7 @@
         </tr>
         <tr>
           <td>BVC (BLTS, BDZC)</td>
-          <td>Branch on overflow clear (Rx &lt; Ry signed, Divide by zero clear)</td>
+          <td>Branch on overflow clear (Op1 &lt; Op2 signed, Divide by zero clear)</td>
           <td>
             PC = PC + O if V = 0
           </td>
@@ -807,7 +819,7 @@
         </tr>
         <tr>
           <td>BVS (BGES, BDZS)</td>
-          <td>Branch on overflow set (Rx &gt;= Ry signed, Divide by zero set)</td>
+          <td>Branch on overflow set (Op1 &gt;= Op2 signed, Divide by zero set)</td>
           <td>
             PC = PC + O if V = 1
           </td>
@@ -817,7 +829,8 @@
           <td>JMA</td>
           <td>Jump to an absolute unsigned address</td>
           <td>
-            PC = W; or PC = O
+            PC = R<br>
+            PC = O
           </td>
           <td>-------- --------</td>
         </tr>
@@ -825,7 +838,8 @@
           <td>JMCP</td>
           <td>Jump to an unsigned address relative to CP</td>
           <td>
-            PC = CP + W; or PC = CP + O
+            PC = CP + R<br>
+            PC = CP + O
           </td>
           <td>-------- --------</td>
         </tr>
@@ -833,7 +847,8 @@
           <td>JMP</td>
           <td>Jump to relative signed address</td>
           <td>
-            PC = PC + W; or PC = PC + O
+            PC = PC + R<br>
+            PC = PC + O
           </td>
           <td>-------- --------</td>
         </tr>
@@ -841,8 +856,8 @@
           <td>JSA</td>
           <td>Jump to subroutine at an absolute unsigned address</td>
           <td>
-            Push PC<br>
-            PC = W; or PC = O
+            Push PC; PC = R<br>
+            Push PC; PC = O
           </td>
           <td>-------- --------</td>
         </tr>
@@ -850,8 +865,8 @@
           <td>JSCP</td>
           <td>Jump to subroutine at an unsigned address relative to CP</td>
           <td>
-            Push PC<br>
-            PC = CP + W; or PC = CP + O
+            Push PC; PC = CP + R<br>
+            Push PC; PC = CP + O
           </td>
           <td>-------- --------</td>
         </tr>
@@ -859,8 +874,8 @@
           <td>JSR</td>
           <td>Jump to subroutine at a relative signed address</td>
           <td>
-            Push PC<br>
-            PC = PC + W; or PC = PC + O
+            Push PC; PC = PC + R<br>
+            Push PC; PC = PC + O
           </td>
           <td>-------- --------</td>
         </tr>
@@ -868,30 +883,6 @@
           <td>RTI</td>
           <td>Return from interrupt</td>
           <td>
-            Pull R0<br>
-            Pull R1<br>
-            Pull R2<br>
-            Pull R3<br>
-            Pull PTR0<br>
-            Pull PTR1<br>
-            Pull PTR2<br>
-            Pull PTR3<br>
-            Pull OFS0<br>
-            Pull OFS1<br>
-            Pull OFS2<br>
-            Pull OFS3<br>
-            Pull IX0<br>
-            Pull IX1<br>
-            Pull IX2<br>
-            Pull IX3<br>
-            Pull IS0<br>
-            Pull IS1<br>
-            Pull IS2<br>
-            Pull IS3<br>
-            Pull CTR0<br>
-            Pull CTR1<br>
-            Pull CTR2<br>
-            Pull CTR3<br>
             Pull CP<br>
             Pull PC<br>
             Pull SB<br>
@@ -900,13 +891,14 @@
             Pull ST<br>
             A hardware error occurs if the stack underflows
           </td>
-          <td>CVZNAAAI WWRROODD</td>
+          <td>CVZNAAAI RRPTOOMM</td>
         </tr>
         <tr>
           <td>RTS</td>
           <td>Return from subroutine</td>
           <td>
-            Pull PC; or SP = SP + unsigned 8-bit O, Pull PC<br>
+            Pull PC<br>
+            SP = SP + unsigned 8-bit O; Pull PC<br>
             A hardware error occurs if the stack underflows
           </td>
           <td>-------- --------</td>
@@ -918,65 +910,43 @@
           <td>MOV</td>
           <td>Move data</td>
           <td>
-            Set up register values by copying same numbered<br>
-            registers values to/from R0 to R3:<br>
-            MOV RW,PTR<br>
-            MOV RW,OFS<br>
-            MOV RW,IX<br>
-            MOV RW,IS<br>
-            MOV RW,CTR<br>
-            MOV RW,CS<br>
-            MOV RW,TMR<br>
-            MOV RW,TPTR<br>
-            MOV PTR,RW<br>
-            MOV OFS,RW<br>
-            MOV IX,RW<br>
-            MOV IS,RW<br>
-            MOV CTR,RW<br>
-            MOV CS,RW<br>
-            MOV TMR,RW<br>
-            MOV TPTR,RW<br>
-            SWP RW,PTR<br>
-            SWP RW,OFS<br>
-            SWP RW,IX<br>
-            SWP RW,IS<br>
-            SWP RW,CTR<br>
-            SWP RW,CS<br>
-            SWP RW,TMR<br>
-            SWP RW,TPTR<br>
-            <br>
-            Set up register values by copying register values to/from R0:<br>
+            MOV R,Rc<br>
+            MOV Rc,R<br>
+            MOV R,PTR<br>
+            SWP R,Rc<br>
+            MOV PTR,R<br>
+            MOV R,*PTR<br>
+            MOV *PTR,R<br>
+            SWP R,*PTR<br>
+            MOV R,OFS<br>
+            MOV OFS,R<br>
+            MOV R,IX<br>
+            MOV IX,R<br>
+            MOV R,IS<br>
+            MOV IS,R<br>
+            MOV R,CTR<br>
+            MOV CTR,R<br>
+            MOV R,CS<br>
+            MOV CS,R<br>
             MOV R0,CP<br>
-            MOV R0,SB<br>
-            MOV R0,SL<br>
-            MOV R0,SP<br>
-            MOV R0,ST<br>
             MOV CP,R0<br>
+            MOV R0,SB<br>
             MOV SB,R0<br>
+            MOV R0,SL<br>
             MOV SL,R0<br>
+            MOV R0,SP<br>
             MOV SP,R0<br>
+            MOV R,*SP[O]<br>
+            MOV *SP[O],R<br>
+            SWP R,*SP[O]<br>
+            MOV R0,ST<br>
             MOV ST,R0<br>
-            <br>
-            Copy memory from same numbered<br>
-            pointers to/from R0 to R3 with current addressing mode:<br>
-            MOV RW,*PTR<br>
-            MOV *PTR,RW<br>
-            SWP RW,*PTR<br>
-            <br>
-            Move values between registers Rx and Ry, where x != y:<br>
-            MOV Rx, Ry<br>
-            SWP Rx, Ry
-            <br>
-            Move values between register and stack allocated space,<br>
-            The operand is a hard-coded 16-bit offset<br>
-            MOV RW,*SP[O]<br>
-            MOV *SP[O],RW<br>
-            SWP RW,*SP[O]<br>
+            Operations involving *SP[O] always use an 8-bit operand
           </td>
           <td>
             --ZN---- --------<br>
-            (MOV only)<br>
-            (MOV ST,R0 affects all flags)
+            MOV only; SWP does not affect any flags<br>
+            MOV ST,R0 affects all flags
           </td>
         </tr>
         <tr>
@@ -996,34 +966,27 @@
           <td>Push on the stack</td>
           <td>
             If SP - register size &lt; SB execute *FFFFFFF8 interrupt with R0 = 0, R1 = 1 (SP overflow)<br>
-            *SP = R<br>
+            *SP = register<br>
             SP = SP - register size<br>
-            Bytes are written so that highest byte is earliest memory address<br>
+            Up to implementation whether Bytes are written big or litle endian<br>
+            Only guarantee is that a push followed by a pull of the same register works as expected<br>
             <br>
             PSH R0<br>
             PSH R1<br>
             PSH R2<br>
             PSH R3<br>
             PSH PTR0<br>
-            PSH PTR1<br>
-            PSH PTR2<br>
-            PSH PTR3<br>
             PSH OFS0<br>
-            PSH OFS1<br>
-            PSH OFS2<br>
-            PSH OFS3<br>
             PSH IX0<br>
-            PSH IX1<br>
-            PSH IX2<br>
-            PSH IX3<br>
             PSH IS0<br>
+            PSH PTR1<br>
+            PSH OFS1<br>
+            PSH IX1<br>
             PSH IS1<br>
-            PSH IS2<br>
-            PSH IS3<br>
             PSH CTR0<br>
+            PSH CS0<br>
             PSH CTR1<br>
-            PSH CTR2<br>
-            PSH CTR3<br>
+            PSH CS1<br>
             PSH ST<br>
           </td>
           <td>-------- --------</td>
@@ -1034,35 +997,30 @@
           <td>
             If SP + register size &gt; SL execute *FFFFFFF8 interrupt with R0 = 0, R1 = 2 (SP underflow)<br>
             SP = SP + register size<br>
-            R = *SP<br>
+            register = *SP<br>
             <br>
             PUL R0<br>
             PUL R1<br>
             PUL R2<br>
             PUL R3<br>
             PUL PTR0<br>
-            PUL PTR1<br>
-            PUL PTR2<br>
-            PUL PTR3<br>
             PUL OFS0<br>
-            PUL OFS1<br>
-            PUL OFS2<br>
-            PUL OFS3<br>
             PUL IX0<br>
-            PUL IX1<br>
-            PUL IX2<br>
-            PUL IX3<br>
             PUL IS0<br>
+            PUL PTR1<br>
+            PUL OFS1<br>
+            PUL IX1<br>
             PUL IS1<br>
-            PUL IS2<br>
-            PUL IS3<br>
             PUL CTR0<br>
+            PUL CS0<br>
             PUL CTR1<br>
-            PUL CTR2<br>
-            PUL CTR3<br>
+            PUL CS1<br>
             PUL ST<br>
           </td>
-          <td>--ZN---- --------</td>
+          <td>
+            ------- --------<br>
+            Except PUL ST which affects all flags
+          </td>
         </tr>
         <tr>
           <td>SSP</td>
@@ -1070,7 +1028,7 @@
           <td>
             If SP - O &lt; SB execute *FFFFFFF8 interrupt with R0 = 0, R1 = 1 (SP overflow)<br>
             SP = SP - O<br>
-            Operand size determined by instruction
+            Operand size is always 8 bits
           </td>
           <td>--------- --------</td>
         </tr>
@@ -1102,19 +1060,160 @@
           <td>-------I --------</td>
         </tr>
         <tr>
+          <td>SEA0</td>
+          <td>Set address mode 0</td>
+          <td>Set AAA = 0</td>
+          <td>----000- --------</td>
+        </tr>
+        <tr>
+          <td>SEA1</td>
+          <td>Set address mode 1</td>
+          <td>Set AAA = 1</td>
+          <td>----001- --------</td>
+        </tr>
+        <tr>
+          <td>SEA2</td>
+          <td>Set address mode 2</td>
+          <td>Set AAA = 2</td>
+          <td>----010- --------</td>
+        </tr>
+        <tr>
+          <td>SEA3</td>
+          <td>Set address mode 3</td>
+          <td>Set AAA = 3</td>
+          <td>----011- --------</td>
+        </tr>
+        <tr>
+          <td>SEA4</td>
+          <td>Set address mode 4</td>
+          <td>Set AAA = 4</td>
+          <td>----100- --------</td>
+        </tr>
+        <tr>
+          <td>SEA5</td>
+          <td>Set address mode 5</td>
+          <td>Set AAA = 5</td>
+          <td>----101- --------</td>
+        </tr>
+        <tr>
+          <td>SEA6</td>
+          <td>Set address mode 6</td>
+          <td>Set AAA = 6</td>
+          <td>----110- --------</td>
+        </tr>
+        <tr>
+          <td>SEA7</td>
+          <td>Set address mode 7</td>
+          <td>Set AAA = 7</td>
+          <td>----111- --------</td>
+        </tr>
+        <tr>
+          <td>SER0</td>
+          <td>Select R0</td>
+          <td>Set RR = 0</td>
+          <td>-------- 00------</td>
+        </tr>
+        <tr>
+          <td>SER1</td>
+          <td>Select R1</td>
+          <td>Set RR = 1</td>
+          <td>-------- 01------</td>
+        </tr>
+        <tr>
+          <td>SER2</td>
+          <td>Select R2</td>
+          <td>Set RR = 2</td>
+          <td>-------- 10------</td>
+        </tr>
+        <tr>
+          <td>SER3</td>
+          <td>Select R3</td>
+          <td>Set RR = 3</td>
+          <td>-------- 11------</td>
+        </tr>
+        <tr>
+          <td>SEPS0</td>
+          <td>Select pointer set 0</td>
+          <td>Set P = 0</td>
+          <td>-------- --0-----</td>
+        </tr>
+        <tr>
+          <td>SEPS1</td>
+          <td>Select pointer set 1</td>
+          <td>Set P = 1</td>
+          <td>-------- --1-----</td>
+        </tr>
+        <tr>
+          <td>SET0</td>
+          <td>Select counter set 0</td>
+          <td>Set T = 0</td>
+          <td>-------- ---0----</td>
+        </tr>
+        <tr>
+          <td>SET1</td>
+          <td>Select counter set 1</td>
+          <td>Set T = 1</td>
+          <td>-------- ---1----</td>
+        </tr>
+        <tr>
+          <td>SEO0</td>
+          <td>Select operand size 0</td>
+          <td>Set OO = 0</td>
+          <td>-------- ----00--</td>
+        </tr>
+        <tr>
+          <td>SEO1</td>
+          <td>Select operand size 1</td>
+          <td>Set OO = 1</td>
+          <td>-------- ----01--</td>
+        </tr>
+        <tr>
+          <td>SEO2</td>
+          <td>Select operand size 2</td>
+          <td>Set OO = 2</td>
+          <td>-------- ----10--</td>
+        </tr>
+        <tr>
+          <td>SEO3</td>
+          <td>Select operand size 3</td>
+          <td>Set OO = 3</td>
+          <td>-------- ----11--</td>
+        </tr>
+        <tr>
+          <td>SEM0</td>
+          <td>Select math mode 0</td>
+          <td>Set MM = 0</td>
+          <td>-------- ------00</td>
+        </tr>
+        <tr>
+          <td>SEM1</td>
+          <td>Select math mode 1</td>
+          <td>Set MM = 1</td>
+          <td>-------- ------01</td>
+        </tr>
+        <tr>
+          <td>SEM2</td>
+          <td>Select math mode 2</td>
+          <td>Set MM = 2</td>
+          <td>-------- ------10</td>
+        </tr>
+        <tr>
+          <td>SEM3</td>
+          <td>Select math mode 3</td>
+          <td>Set MM = 3</td>
+          <td>-------- ------11</td>
+        </tr>
+        <tr>
           <td colspan="4">Unary (<span class="count-ins0-unary"></span> opcodes)</td>
         </tr>
         <tr>
           <td>DEC</td>
           <td>Decrement</td>
           <td>
-            W = W - 1<br>
-            CTR0 = CTR0 - 1<br>
-            CTR1 = CTR1 - 1<br>
-            CTR2 = CTR2 - 1<br>
-            CTR3 = CTR3 - 1<br>
-            C = 1 if (H(W) = 0) and (H(W') = 1)<br>
-            V = 1 if (H(W) = 1) and (H(W') = 0)<br>
+            R = R - 1<br>
+            *PTR = *PTR -1<br>
+            C = 1 if (H(R/*PTR) = 0) and (H'(R/*PTR) = 1)<br>
+            V = 1 if (H(R/*PTR) = 1) and (H'(R/*PTR) = 0)<br>
             Only the Zero flag is set for counters
           </td>
           <td>CVZN---- --------</td>
@@ -1123,41 +1222,48 @@
           <td>INC</td>
           <td>Increment</td>
           <td>
-            W = W + 1<br>
-            C = 1 if (H(W) = 1) and (H(W') = 0)<br>
-            V = 1 if (H(W) = 0) and (H(W') = 1)<br>
+            R = R + 1<br>
+            *PTR = *PTR + 1<br>
+            C = 1 if (H(R/*PTR) = 1) and (H'(R/*PTR) = 0)<br>
+            V = 1 if (H(R/*PTR) = 0) and (H'(R/*PTR) = 1)<br>
           </td>
           <td>CVZN---- --------</td>
         </tr>
         <tr>
           <td>NEG</td>
           <td>Negate</td>
-          <td>W = -W</td>
+          <td>
+            R = -R<br>
+            *PTR = -*PTR
+          </td>
           <td>--ZN---- --------</td>
         </tr>
         <tr>
           <td>NG1</td>
           <td>Set to -1</td>
           <td>
-            W = -1<br>
-            WIS = -1<br>
-            RIS = -1<br>
+            R = -1<br>
+            *PTR = -1<br>
+            IS = -1
           </td>
           <td>--ZN----- --------</td>
         </tr>
         <tr>
           <td>NOT</td>
           <td>Bitwise NOT</td>
-          <td>W = ~W</td>
+          <td>
+            R = ~R<br>
+            *PTR = ~*PTR
+          </td>
           <td>--ZN---- --------</td>
         </tr>
         <tr>
           <td>NXT</td>
           <td>Add step to register</td>
           <td>
-            WIX = WIX + WIS<br>
-            RIX = RIX + RIS<br>
-            CVZN are set the same as for ADC
+            IX = IX + IS<br>
+            CTR = CTR - CS<br>
+            CVZN are set the same as for ADC/SBB
           </td>
           <td>CVZN---- --------</td>
         </tr>
@@ -1165,11 +1271,9 @@
           <td>ONE</td>
           <td>Set to 1</td>
           <td>
-            W = 1<br>
-            WIX = 1<br>
-            WIS = 1<br>
-            RIX = 1<br>
-            RIS = 1<br>
+            R = 1<br>
+            IS = 1<br>
+            CS = 1
           </td>
           <td>--ZN---- --------</td>
         </tr>
@@ -1177,9 +1281,9 @@
           <td>SHLC</td>
           <td>Shift left with carry</td>
           <td>
-            W = W &lt;&lt; 1<br>
-            BIT0(W) = C<br>
-            C = H(W)
+            R = R &lt;&lt; 1<br>
+            BIT0(R) = C<br>
+            C = H(R)
           </td>
           <td>C-ZN--- --------</td>
         </tr>
@@ -1187,9 +1291,9 @@
           <td>SHRC</td>
           <td>Shift right with carry</td>
           <td>
-            W = W &gt;&gt; 1<br>
-            H(W) = C<br>
-            C = BIT0(W)
+            R = R &gt;&gt; 1<br>
+            H(R) = C<br>
+            C = BIT0(R)
           </td>
           <td>C-ZN--- --------</td>
         </tr>
@@ -1197,9 +1301,9 @@
           <td>SHAC</td>
           <td>Arithmetic shift right with carry</td>
           <td>
-            W = W &gt;&gt; 1<br>
-            H(W') = H(W)<br>
-            C = BIT0(W)
+            R = R &gt;&gt; 1<br>
+            H'(R) = H(R)<br>
+            C = BIT0(R)
           </td>
           <td>C-ZN--- --------</td>
         </tr>
@@ -1207,11 +1311,8 @@
           <td>ZRO</td>
           <td>Set to 0</td>
           <td>
-            W = 0<br>
-            WIX = 0<br>
-            WIS = 0<br>
-            RIX = 0<br>
-            RIS = 0<br>
+            R = 0<br>
+            IX = 0
           </td>
           <td>--ZN---- --------</td>
         </tr>
