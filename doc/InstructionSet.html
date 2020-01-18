@@ -457,7 +457,17 @@
       <tbody>
         <tr>
           <td>R0 - R3</td>
-          <td>64 bit signed general purpose registers that work in pairs</td>
+          <td>
+            64 bit signed general purpose registers that work in two pairs: (R0, R1) and (R2, R3).<br>
+            Instructions that require two of these registers will work with a pair,<br>
+            where one register is referred to as the complement:<br>
+            R0 complement = R1<br>
+            R1 complement = R0<br>
+            R2 complement = R3<br>
+            R3 complement = R2<br>
+            When a literal operand or memory is loaded into a register, and the current operand size<br>
+            is less than 64 bits, the highest bit of the operand is copied into the upper bits.
+          </td>
         </tr>
         <tr>
           <td>PTR0, PTR1</td>
@@ -481,7 +491,7 @@
         </tr>
         <tr>
           <td>CS0, CS1</td>
-          <td>32 bit unsigned counter step registers</td>
+          <td>16 bit unsigned counter step registers</td>
         </tr>
         <tr>
           <td>CP</td>
@@ -503,7 +513,14 @@
         </tr>
         <tr>
           <td>SP</td>
-          <td>32 bit unsigned stack pointer</td>
+          <td>
+            32 bit unsigned stack pointer.<br>
+            SP starts at SL and moves downward towards SB inclusive.<br>
+            If pushing onto the stack results in SP &lt; SB,<br>
+            execute *FFFFFFF8 interrupt with R0 = 0, R1 = 1 (SP overflow).<br>
+            If pulling from the stack results in SP &gt; SL,<br>
+            execute *FFFFFFF8 interrupt with R0 = 0, R1 = 2 (SP underflow).
+          </td>
         </tr>
         <tr>
           <td>PC</td>
@@ -511,7 +528,7 @@
         </tr>
         <tr>
           <td>ST</td>
-          <td>16 bit status register, consists of CVZNAAAI RRPTOOMM:<br>
+          <td>16 bit status register, consists of CVZNAAAS RRPTOOMM:<br>
               Carry, oVerflow, Zero, Negative, Address mode, Interrupt Disable,<br>
               Register, Pointer register, counTer register, Operand size, Math mode
           </td>
@@ -626,7 +643,7 @@
             For ADC, SBB, and MUL, Carry has no meaning and overflow is overflow<br>
             For DIV, Carry is modulo, overflow has no meaning<br>
             The relevant CVZN flags are modified on each instruction<br>
-            Highst bit is always sign bit, no unsigned math<br>
+            Highest bit is always sign bit, no unsigned math<br>
             <br>
             Floating Point Mode:<br>
             Carry = NaN<br>
@@ -655,6 +672,7 @@
       <li>Ir = Input register or data</li>
       <li>Or = Output register</li>
       <li>H = Highest bit, depends on operand size (bit 7, 15, 31, or 63)</li>
+      <li>An apostrophe indicates the value after the instruction has executed</li>
     </ul>
     <table>
       <thead>
@@ -670,7 +688,7 @@
           <td colspan="4">Binary (<span class="count-ins0-binary"></span> opcodes)</td>
         </tr>
         <tr>
-          <td>ADC</td>
+          <td>ADD</td>
           <td>Add with carry</td>
           <td>
             R = R + Rc + C<br>
@@ -711,21 +729,22 @@
           <td>--ZN---- --------</td>
         </tr>
         <tr>
-          <td>SBB</td>
-          <td>Subtract with borrow</td>
+          <td>SHA</td>
+          <td>Shift bits right, arithmetic</td>
           <td>
-            R = R - Rc - C<br>
-            R = R - *PTR - C<br>
-            C = 1 if (Rc/*PTR + C) > Or unsigned<br>
-            V = 1 if (H(Or) != H(Ir)) and (H(Rc/*PTR) = H(R - Rc/*PTR - C))<br>
+            R = R &gt;&gt; Rc<br>
+            R = R &gt;&gt; O<br>
+            Highest Rc bits of R &gt;&gt; Rc = H(R), causing the sign of R to remain the same<br>
+            C = 1 if any of the lower Rc bits of R are set
           </td>
-          <td>CVZN---- --------</td>
+          <td>C-ZN---- --------</td>
         </tr>
         <tr>
           <td>SHL</td>
           <td>Shift bits left</td>
           <td>
             R = R &lt;&lt; Rc<br>
+            R = R &lt;&lt; O<br>
             C = 1 if any of the upper Rc bits of R are set
           </td>
           <td>C-ZN---- --------</td>
@@ -735,19 +754,21 @@
           <td>Shift bits right</td>
           <td>
             R = R &gt;&gt; Rc<br>
+            R = R &gt;&gt; O<br>
             C = 1 if any of the lower Rc bits of R are set
           </td>
           <td>C-ZN---- --------</td>
         </tr>
         <tr>
-          <td>SHA</td>
-          <td>Shift bits right, arithmetic</td>
+          <td>SUB</td>
+          <td>Subtract with borrow</td>
           <td>
-            R = R &gt;&gt; Rc<br>
-            Highest Rc bits of R &gt;&gt; Rc = H(R), causing the sign of R to remain the same<br>
-            C = 1 if any of the lower Rc bits of R are set
+            R = R - Rc - C<br>
+            R = R - *PTR - C<br>
+            C = 1 if (Rc/*PTR + C) > Or unsigned<br>
+            V = 1 if (H(Or) != H(Ir)) and (H(Rc/*PTR) = H(R - Rc/*PTR - C))<br>
           </td>
-          <td>C-ZN---- --------</td>
+          <td>CVZN---- --------</td>
         </tr>
         <tr>
           <td>XOR</td>
@@ -912,30 +933,23 @@
           <td>
             MOV R,Rc<br>
             MOV Rc,R<br>
-            MOV R,PTR<br>
             SWP R,Rc<br>
+            MOV R,PTR<br>
             MOV PTR,R<br>
+            SWP R,PTR<br>
             MOV R,*PTR<br>
             MOV *PTR,R<br>
             SWP R,*PTR<br>
-            MOV R,OFS<br>
-            MOV OFS,R<br>
-            MOV R,IX<br>
-            MOV IX,R<br>
-            MOV R,IS<br>
-            MOV IS,R<br>
-            MOV R,CTR<br>
-            MOV CTR,R<br>
-            MOV R,CS<br>
-            MOV CS,R<br>
-            MOV R0,CP<br>
-            MOV CP,R0<br>
-            MOV R0,SB<br>
-            MOV SB,R0<br>
-            MOV R0,SL<br>
-            MOV SL,R0<br>
-            MOV R0,SP<br>
-            MOV SP,R0<br>
+            MOV R,O<br>
+            SWP R,OFS<br>
+            SWP R,IX<br>
+            SWP R,IS<br>
+            SWP R,CTR<br>
+            SWP R,CS<br>
+            SWP R0,CP<br>
+            SWP R0,SB<br>
+            SWP R0,SL<br>
+            MOV SP,SL<br>
             MOV R,*SP[O]<br>
             MOV *SP[O],R<br>
             SWP R,*SP[O]<br>
@@ -945,7 +959,8 @@
           </td>
           <td>
             --ZN---- --------<br>
-            MOV only; SWP does not affect any flags<br>
+            SWP does not affect any flags<br>
+            MOV R0,ST does not affect any flags<br>
             MOV ST,R0 affects all flags
           </td>
         </tr>
@@ -1048,18 +1063,6 @@
           <td>-------I --------</td>
         </tr>
         <tr>
-          <td>SEC (SENAN)</td>
-          <td>Set carry flag (Set NaN)</td>
-          <td>Set C = 1</td>
-          <td>C------- --------</td>
-        </tr>
-        <tr>
-          <td>SEI</td>
-          <td>Set hardware interrupt disable flag</td>
-          <td>Set I = 1</td>
-          <td>-------I --------</td>
-        </tr>
-        <tr>
           <td>SEA0</td>
           <td>Set address mode 0</td>
           <td>Set AAA = 0</td>
@@ -1108,76 +1111,16 @@
           <td>----111- --------</td>
         </tr>
         <tr>
-          <td>SER0</td>
-          <td>Select R0</td>
-          <td>Set RR = 0</td>
-          <td>-------- 00------</td>
+          <td>SEC (SENAN)</td>
+          <td>Set carry flag (Set NaN)</td>
+          <td>Set C = 1</td>
+          <td>C------- --------</td>
         </tr>
         <tr>
-          <td>SER1</td>
-          <td>Select R1</td>
-          <td>Set RR = 1</td>
-          <td>-------- 01------</td>
-        </tr>
-        <tr>
-          <td>SER2</td>
-          <td>Select R2</td>
-          <td>Set RR = 2</td>
-          <td>-------- 10------</td>
-        </tr>
-        <tr>
-          <td>SER3</td>
-          <td>Select R3</td>
-          <td>Set RR = 3</td>
-          <td>-------- 11------</td>
-        </tr>
-        <tr>
-          <td>SEPS0</td>
-          <td>Select pointer set 0</td>
-          <td>Set P = 0</td>
-          <td>-------- --0-----</td>
-        </tr>
-        <tr>
-          <td>SEPS1</td>
-          <td>Select pointer set 1</td>
-          <td>Set P = 1</td>
-          <td>-------- --1-----</td>
-        </tr>
-        <tr>
-          <td>SET0</td>
-          <td>Select counter set 0</td>
-          <td>Set T = 0</td>
-          <td>-------- ---0----</td>
-        </tr>
-        <tr>
-          <td>SET1</td>
-          <td>Select counter set 1</td>
-          <td>Set T = 1</td>
-          <td>-------- ---1----</td>
-        </tr>
-        <tr>
-          <td>SEO0</td>
-          <td>Select operand size 0</td>
-          <td>Set OO = 0</td>
-          <td>-------- ----00--</td>
-        </tr>
-        <tr>
-          <td>SEO1</td>
-          <td>Select operand size 1</td>
-          <td>Set OO = 1</td>
-          <td>-------- ----01--</td>
-        </tr>
-        <tr>
-          <td>SEO2</td>
-          <td>Select operand size 2</td>
-          <td>Set OO = 2</td>
-          <td>-------- ----10--</td>
-        </tr>
-        <tr>
-          <td>SEO3</td>
-          <td>Select operand size 3</td>
-          <td>Set OO = 3</td>
-          <td>-------- ----11--</td>
+          <td>SEI</td>
+          <td>Set hardware interrupt disable flag</td>
+          <td>Set I = 1</td>
+          <td>-------I --------</td>
         </tr>
         <tr>
           <td>SEM0</td>
@@ -1204,6 +1147,78 @@
           <td>-------- ------11</td>
         </tr>
         <tr>
+          <td>SEO0</td>
+          <td>Select operand size 0</td>
+          <td>Set OO = 0</td>
+          <td>-------- ----00--</td>
+        </tr>
+        <tr>
+          <td>SEO1</td>
+          <td>Select operand size 1</td>
+          <td>Set OO = 1</td>
+          <td>-------- ----01--</td>
+        </tr>
+        <tr>
+          <td>SEO2</td>
+          <td>Select operand size 2</td>
+          <td>Set OO = 2</td>
+          <td>-------- ----10--</td>
+        </tr>
+        <tr>
+          <td>SEO3</td>
+          <td>Select operand size 3</td>
+          <td>Set OO = 3</td>
+          <td>-------- ----11--</td>
+        </tr>
+        <tr>
+          <td>SEPS0</td>
+          <td>Select pointer set 0</td>
+          <td>Set P = 0</td>
+          <td>-------- --0-----</td>
+        </tr>
+        <tr>
+          <td>SEPS1</td>
+          <td>Select pointer set 1</td>
+          <td>Set P = 1</td>
+          <td>-------- --1-----</td>
+        </tr>
+        <tr>
+          <td>SER0</td>
+          <td>Select R0</td>
+          <td>Set RR = 0</td>
+          <td>-------- 00------</td>
+        </tr>
+        <tr>
+          <td>SER1</td>
+          <td>Select R1</td>
+          <td>Set RR = 1</td>
+          <td>-------- 01------</td>
+        </tr>
+        <tr>
+          <td>SER2</td>
+          <td>Select R2</td>
+          <td>Set RR = 2</td>
+          <td>-------- 10------</td>
+        </tr>
+        <tr>
+          <td>SER3</td>
+          <td>Select R3</td>
+          <td>Set RR = 3</td>
+          <td>-------- 11------</td>
+        </tr>
+        <tr>
+          <td>SET0</td>
+          <td>Select counter set 0</td>
+          <td>Set T = 0</td>
+          <td>-------- ---0----</td>
+        </tr>
+        <tr>
+          <td>SET1</td>
+          <td>Select counter set 1</td>
+          <td>Set T = 1</td>
+          <td>-------- ---1----</td>
+        </tr>
+        <tr>
           <td colspan="4">Unary (<span class="count-ins0-unary"></span> opcodes)</td>
         </tr>
         <tr>
@@ -1212,7 +1227,7 @@
           <td>
             R = R - 1<br>
             *PTR = *PTR -1<br>
-            C = 1 if (H(R/*PTR) = 0) and (H'(R/*PTR) = 1)<br>
+            C = 1 if H(R/*PTR) = 0 and (H'(R/*PTR) = 1)<br>
             V = 1 if (H(R/*PTR) = 1) and (H'(R/*PTR) = 0)<br>
             Only the Zero flag is set for counters
           </td>
@@ -1242,9 +1257,9 @@
           <td>NG1</td>
           <td>Set to -1</td>
           <td>
-            R = -1<br>
-            *PTR = -1<br>
-            IS = -1
+            R = -1 (64 bits)<br>
+            *PTR = -1 (current operand size)<br>
+            IS = -1 (16 bits)
           </td>
           <td>--ZN----- --------</td>
         </tr>
@@ -1271,11 +1286,21 @@
           <td>ONE</td>
           <td>Set to 1</td>
           <td>
-            R = 1<br>
-            IS = 1<br>
-            CS = 1
+            R = 1 (64 bits)<br>
+            IS = 1 (16 bits)<br>
+            CS = 1 (16 bits)
           </td>
           <td>--ZN---- --------</td>
+        </tr>
+        <tr>
+          <td>SHAC</td>
+          <td>Arithmetic shift right with carry</td>
+          <td>
+            R = R &gt;&gt; 1<br>
+            H'(R) = H(R)<br>
+            C = BIT0(R)
+          </td>
+          <td>C-ZN--- --------</td>
         </tr>
         <tr>
           <td>SHLC</td>
@@ -1298,21 +1323,11 @@
           <td>C-ZN--- --------</td>
         </tr>
         <tr>
-          <td>SHAC</td>
-          <td>Arithmetic shift right with carry</td>
-          <td>
-            R = R &gt;&gt; 1<br>
-            H'(R) = H(R)<br>
-            C = BIT0(R)
-          </td>
-          <td>C-ZN--- --------</td>
-        </tr>
-        <tr>
           <td>ZRO</td>
           <td>Set to 0</td>
           <td>
-            R = 0<br>
-            IX = 0
+            R = 0 (64 bits)<br>
+            IX = 0 (16 bits)
           </td>
           <td>--ZN---- --------</td>
         </tr>
@@ -1588,234 +1603,239 @@ FF0032: Set up initial program
       <tbody>
         <tr>
           <th>0</th>
-          <td class="ins0-move">MOV RW,PTR</td>
-          <td class="ins0-move">MOV PTR,RW</td>
-          <td class="ins0-move">SWP RW,PTR</td>
-          <td class="ins0-move">MOV R0,CP</td>
-          <td class="ins0-move">MOV CP,R0</td>
-          <td class="ins0-move">SWP R0,R1</td>
-          <td class="ins0-move">MOV RW,*PTR</td>
           <td class="ins0-stack">PSH R0</td>
-          <td class="ins0-stack">PUL R0</td>
-          <td class="ins0-stack">PSH IX0</td>
-          <td class="ins0-stack">PUL IX0</td>
-          <td class="ins0-stack">PSH CTR0</td>
-          <td class="ins0-stack">PUL CTR0</td>
+          <td class="ins0-stack">PSH R1</td>
+          <td class="ins0-stack">PSH R2</td>
+          <td class="ins0-stack">PSH R3</td>
+          <td class="ins0-stack">PSH PTR0</td>
           <td class="ins0-stack">PSH OFS0</td>
-          <td class="ins0-stack">PUL OFS0</td>
-          <td class="ins0-branch">BCC</td>
+          <td class="ins0-stack">PSH IX0</td>
+          <td class="ins0-stack">PSH IS0</td>
+          <td class="ins0-stack">PSH PTR1</td>
+          <td class="ins0-stack">PSH OFS1</td>
+          <td class="ins0-stack">PSH IX1</td>
+          <td class="ins0-stack">PSH IS1</td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
         </tr>
         <tr>
           <th>1</th>
-          <td class="ins0-move">MOV RW,OFS</td>
-          <td class="ins0-move">MOV OFS,RW</td>
-          <td class="ins0-move">SWP RW,OFS</td>
-          <td class="ins0-move">MOV R0,SB</td>
-          <td class="ins0-move">MOV SB,R0</td>
-          <td class="ins0-move">SWP R0,R2</td>
-          <td class="ins0-move">MOV *PTR,RW</td>
-          <td class="ins0-stack">PSH R1</td>
+          <td class="ins0-stack">PUL R0</td>
           <td class="ins0-stack">PUL R1</td>
-          <td class="ins0-stack">PSH IX1</td>
-          <td class="ins0-stack">PUL IX1</td>
-          <td class="ins0-stack">PSH CTR1</td>
-          <td class="ins0-stack">PUL CTR1</td>
-          <td class="ins0-stack">PSH OFS1</td>
+          <td class="ins0-stack">PUL R2</td>
+          <td class="ins0-stack">PUL R3</td>
+          <td class="ins0-stack">PUL PTR0</td>
+          <td class="ins0-stack">PUL OFS0</td>
+          <td class="ins0-stack">PUL IX0</td>
+          <td class="ins0-stack">PUL IS0</td>
+          <td class="ins0-stack">PUL PTR1</td>
           <td class="ins0-stack">PUL OFS1</td>
-          <td class="ins0-branch">BCS</td>
+          <td class="ins0-stack">PUL IX1</td>
+          <td class="ins0-stack">PUL IS1</td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
         </tr>
         <tr>
           <th>2</th>
-          <td class="ins0-move">MOV RW,IX</td>
-          <td class="ins0-move">MOV IX,RW</td>
-          <td class="ins0-move">SWP RW,IX</td>
-          <td class="ins0-move">MOV R0,SL</td>
-          <td class="ins0-move">MOV SL,R0</td>
-          <td class="ins0-move">SWP R0,R3</td>
-          <td class="ins0-move">SWP RW,*PTR</td>
-          <td class="ins0-stack">PSH R2</td>
-          <td class="ins0-stack">PUL R2</td>
-          <td class="ins0-stack">PSH IX2</td>
-          <td class="ins0-stack">PUL IX2</td>
-          <td class="ins0-stack">PSH CTR2</td>
-          <td class="ins0-stack">PUL CTR2</td>
-          <td class="ins0-stack">PSH OFS2</td>
-          <td class="ins0-stack">PUL OFS2</td>
-          <td class="ins0-branch">BEQ</td>
+          <td class="ins0-stack">PSH CTR0</td>
+          <td class="ins0-stack">PUL CTR0</td>
+          <td class="ins0-stack">PSH CS0</td>
+          <td class="ins0-stack">PUL CS0</td>
+          <td class="ins0-stack">PSH CTR1</td>
+          <td class="ins0-stack">PUL CTR1</td>
+          <td class="ins0-stack">PSH CS1</td>
+          <td class="ins0-stack">PUL CS1</td>
+          <td class="ins0-stack">PSH ST</td>
+          <td class="ins0-stack">PUL ST</td>
+          <td class="ins0-status">CLC</td>
+          <td class="ins0-status">SEC</td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
         </tr>
         <tr>
           <th>3</th>
-          <td class="ins0-move">MOV RW,IS</td>
-          <td class="ins0-move">MOV IS,RW</td>
-          <td class="ins0-move">SWP RW,IS</td>
-          <td class="ins0-move">MOV R0,SP</td>
-          <td class="ins0-move">MOV SP,R0</td>
-          <td class="ins0-move">SWP R1,R2</td>
-          <td class="ins0-move">SWP R2,R3</td>
-          <td class="ins0-stack">PSH R3</td>
-          <td class="ins0-stack">PUL R3</td>
-          <td class="ins0-stack">PSH IX3</td>
-          <td class="ins0-stack">PUL IX3</td>
-          <td class="ins0-stack">PSH CTR3</td>
-          <td class="ins0-stack">PUL CTR3</td>
-          <td class="ins0-stack">PSH OFS3</td>
-          <td class="ins0-stack">PUL OFS3</td>
-          <td class="ins0-branch">BNE</td>
+          <td class="ins0-status">CLI</td>
+          <td class="ins0-status">SEI</td>
+          <td class="ins0-status">SEA0</td>
+          <td class="ins0-status">SEA1</td>
+          <td class="ins0-status">SEA2</td>
+          <td class="ins0-status">SEA3</td>
+          <td class="ins0-status">SEA4</td>
+          <td class="ins0-status">SEA5</td>
+          <td class="ins0-status">SEA6</td>
+          <td class="ins0-status">SEA7</td>
+          <td class="ins0-status">SET0</td>
+          <td class="ins0-status">SET1</td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
         </tr>
         <tr>
           <th>4</th>
-          <td class="ins0-move">MOV RW,CTR</td>
-          <td class="ins0-move">MOV CTR,RW</td>
-          <td class="ins0-move">SWP RW,CTR</td>
-          <td class="ins0-move">MOV R0,ST</td>
-          <td class="ins0-move">MOV ST,R0</td>
-          <td class="ins0-move">SWP R1,R3</td>
-          <td class="ins0-stack">SSP O</td>
-          <td class="ins0-stack">PSH PTR0</td>
-          <td class="ins0-stack">PUL PTR0</td>
-          <td class="ins0-stack">PSH IS0</td>
-          <td class="ins0-stack">PUL IS0</td>
-          <td class="ins0-stack">PSH CS0</td>
-          <td class="ins0-stack">PUL CS0</td>
-          <td class="ins0-stack">PSH ST</td>
-          <td class="ins0-stack">PUL ST</td>
-          <td class="ins0-branch">BMI</td>
+          <td class="ins0-status">SEM0</td>
+          <td class="ins0-status">SEM1</td>
+          <td class="ins0-status">SEM2</td>
+          <td class="ins0-status">SEM3</td>
+          <td class="ins0-status">SEO0</td>
+          <td class="ins0-status">SEO1</td>
+          <td class="ins0-status">SEO2</td>
+          <td class="ins0-status">SEO3</td>
+          <td class="ins0-status">SEPS0</td>
+          <td class="ins0-status">SEPS1</td>
+          <td class="ins0-status">SER0</td>
+          <td class="ins0-status">SER1</td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
         </tr>
         <tr>
           <th>5</th>
-          <td class="ins0-move">MOV RW,CS</td>
-          <td class="ins0-move">MOV CS,RW</td>
-          <td class="ins0-move">SWP RW,CS</td>
-          <td class="ins0-move">MOV R0,R1</td>
-          <td class="ins0-move">MOV R1,R0</td>
-          <td class="ins0-move">MOV R2,R0</td>
-          <td class="ins0-move">MOV R3,R0</td>
-          <td class="ins0-stack">PSH PTR1</td>
-          <td class="ins0-stack">PUL PTR1</td>
-          <td class="ins0-stack">PSH IS1</td>
-          <td class="ins0-stack">PUL IS1</td>
-          <td class="ins0-stack">PSH CS1</td>
-          <td class="ins0-stack">PUL CS1</td>
-          <td class="ins0-binary">SHL W,R</td>
-          <td class="ins0-branch">JSA O</td>
-          <td class="ins0-branch">BPL</td>
+          <td class="ins0-status">SER2</td>
+          <td class="ins0-status">SER3</td>
+          <td class="ins0-move">MOV R,Rc</td>
+          <td class="ins0-move">MOV Rc,R</td>
+          <td class="ins0-move">SWP R,Rc</td>
+          <td class="ins0-move">MOV R,PTR</td>
+          <td class="ins0-move">MOV PTR,R</td>
+          <td class="ins0-move">SWP R,PTR</td>
+          <td class="ins0-move">MOV R,*PTR</td>
+          <td class="ins0-move">MOV *PTR,R</td>
+          <td class="ins0-move">SWP R,*PTR</td>
+          <td class="ins0-move">MOV R,O</td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
         </tr>
         <tr>
           <th>6</th>
-          <td class="ins0-move">MOV RW,TMR</td>
-          <td class="ins0-move">MOV TMR,RW</td>
-          <td class="ins0-move">SWP RW,TMR</td>
-          <td class="ins0-move">MOV R0,R2</td>
-          <td class="ins0-move">MOV R1,R2</td>
-          <td class="ins0-move">MOV R2,R1</td>
-          <td class="ins0-move">MOV R3,R1</td>
-          <td class="ins0-stack">PSH PTR2</td>
-          <td class="ins0-stack">PUL PTR2</td>
-          <td class="ins0-stack">PSH IS2</td>
-          <td class="ins0-stack">PUL IS2</td>
-          <td class="ins0-stack">PSH CS2</td>
-          <td class="ins0-stack">PUL CS2</td>
-          <td class="ins0-binary">SHR W,R</td>
-          <td class="ins0-branch">JSCP W</td>
-          <td class="ins0-branch">BVC</td>
+          <td class="ins0-move">SWP R,OFS</td>
+          <td class="ins0-move">SWP R,IX</td>
+          <td class="ins0-move">SWP R,IS</td>
+          <td class="ins0-move">SWP R,CTR</td>
+          <td class="ins0-move">SWP R,CS</td>
+          <td class="ins0-move">SWP R0,CP</td>
+          <td class="ins0-move">SWP R0,SB</td>
+          <td class="ins0-move">SWP R0,SL</td>
+          <td class="ins0-move">MOV SP,SL</td>
+          <td class="ins0-move">MOV R,*SP[O]</td>
+          <td class="ins0-move">MOV *SP[O],R</td>
+          <td class="ins0-move">SWP R,*SP[O]</td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
         </tr>
         <tr>
           <th>7</th>
-          <td class="ins0-move">MOV RW,TPTR</td>
-          <td class="ins0-move">MOV TPTR,RW</td>
-          <td class="ins0-move">SWP RW,TPTR</td>
-          <td class="ins0-move">MOV R0,R3</td>
-          <td class="ins0-move">MOV R1,R3</td>
-          <td class="ins0-move">MOV R2,R3</td>
-          <td class="ins0-move">MOV R3,R2</td>
-          <td class="ins0-stack">PSH PTR3</td>
-          <td class="ins0-stack">PUL PTR3</td>
-          <td class="ins0-stack">PSH IS3</td>
-          <td class="ins0-stack">PUL IS3</td>
-          <td class="ins0-stack">PSH CS3</td>
-          <td class="ins0-stack">PUL CS3</td>
-          <td class="ins0-binary">SHA W,R</td>
-          <td class="ins0-branch">JSCP O</td>
+          <td class="ins0-move">MOV R0,ST</td>
+          <td class="ins0-move">MOV ST,R0</td>
+          <td class="ins0-branch">BCC</td>
+          <td class="ins0-branch">BCS</td>
+          <td class="ins0-branch">BNE</td>
+          <td class="ins0-branch">BEQ</td>
+          <td class="ins0-branch">BPL</td>
+          <td class="ins0-branch">BMI</td>
+          <td class="ins0-branch">BVC</td>
           <td class="ins0-branch">BVS</td>
+          <td class="ins0-branch">JMA R</td>
+          <td class="ins0-branch">JMA O</td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
         </tr>
         <tr>
           <th>8</th>
-          <td class="ins0-move">MOV RW,*SP[O]</td>
-          <td class="ins0-move">MOV *SP[O],RW</td>
-          <td class="ins0-move">SWP RW,*SP[O]</td>
-          <td class="ins0-binary">ADC W,R</td>
-          <td class="ins0-binary">AND W,R</td>
-          <td class="ins0-binary">CMP R0,R1</td>
-          <td class="ins0-binary">CMP R0,R2</td>
-          <td class="ins0-binary">CMP R0,R3</td>
-          <td class="ins0-binary">CMP R1,R2</td>
-          <td class="ins0-binary">CMP R1,R3</td>
-          <td class="ins0-binary">CMP R2,R3</td>
-          <td class="ins0-binary">OR W,R</td>
-          <td class="ins0-binary">SBB W,R</td>
-          <td class="ins0-binary">XOR W,R</td>
-          <td class="ins0-branch">JSR W</td>
-          <td class="ins0-branch">JMA W</td>
+          <td class="ins0-branch">JMCP R</td>
+          <td class="ins0-branch">JMCP O</td>
+          <td class="ins0-branch">JMP R</td>
+          <td class="ins0-branch">JMP O</td>
+          <td class="ins0-branch">JSA R</td>
+          <td class="ins0-branch">JSA O</td>
+          <td class="ins0-branch">JSCP R</td>
+          <td class="ins0-branch">JSCP O</td>
+          <td class="ins0-branch">JSR R</td>
+          <td class="ins0-branch">JSR O</td>
+          <td class="ins0-branch">RTI</td>
+          <td class="ins0-branch">RTS</td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
         </tr>
         <tr>
           <th>9</th>
-          <td class="ins0-unary">DEC W</td>
-          <td class="ins0-unary">DEC CTR0</td>
-          <td class="ins0-unary">DEC CTR1</td>
-          <td class="ins0-unary">DEC CTR2</td>
-          <td class="ins0-unary">DEC CTR3</td>
-          <td class="ins0-unary">INC W</td>
-          <td class="ins0-unary">NEG W</td>
-          <td class="ins0-unary">NG1 W</td>
-          <td class="ins0-unary">NG1 WIS</td>
-          <td class="ins0-unary">NG1 RIS</td>
-          <td class="ins0-unary">NOT W</td>
-          <td class="ins0-unary">NXT WIX</td>
-          <td class="ins0-unary">NXT RIX</td>
-          <td class="ins0-unary">ONE W</td>
-          <td class="ins0-branch">JSR O</td>
-          <td class="ins0-branch">JMA O</td>
+          <td class="ins0-branch">RTS O</td>
+          <td class="ins0-unary">DEC R</td>
+          <td class="ins0-unary">INC R</td>
+          <td class="ins0-unary">NEG R</td>
+          <td class="ins0-unary">NOT R</td>
+          <td class="ins0-unary">NXT IX</td>
+          <td class="ins0-unary">ZRO R</td>
+          <td class="ins0-unary">NG1 R</td>
+          <td class="ins0-unary">NG1 *PTR</td>
+          <td class="ins0-unary">NG1 IS</td>
+          <td class="ins0-unary">SHLC R</td>
+          <td class="ins0-unary">SHAC R</td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
         </tr>
         <tr>
           <th>A</th>
-          <td class="ins0-unary">ONE WIX</td>
-          <td class="ins0-unary">ONE WIS</td>
-          <td class="ins0-unary">ONE RIX</td>
-          <td class="ins0-unary">ONE RIS</td>
-          <td class="ins0-unary">SHLC</td>
-          <td class="ins0-unary">SHRC</td>
-          <td class="ins0-unary">SHAC</td>
-          <td class="ins0-unary">ZRO W</td>
-          <td class="ins0-unary">ZRO WIX</td>
-          <td class="ins0-unary">ZRO WIS</td>
-          <td class="ins0-unary">ZRO RIX</td>
-          <td class="ins0-unary">ZRO RIS</td>
+          <td class="ins0-unary">DEC *PTR</td>
+          <td class="ins0-unary">INC *PTR</td>
+          <td class="ins0-unary">NEG *PTR</td>
+          <td class="ins0-unary">NOT *PTR</td>
+          <td class="ins0-unary">NXT CTR</td>
+          <td class="ins0-unary">ZRO IX</td>
+          <td class="ins0-unary">ONE R</td>
+          <td class="ins0-unary">ONE IS</td>
+          <td class="ins0-unary">ONE CS</td>
+          <td class="ins0-unary">SHRC R</td>
+          <td class="ins0-binary">ADD R,Rc</td>
+          <td class="ins0-binary">ADD R,*PTR</td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
-          <td class="ins0-branch">RTI</td>
-          <td class="ins0-branch">JMCP W</td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
         </tr>
         <tr>
           <th>B</th>
+          <td class="ins0-binary">AND R,Rc</td>
+          <td class="ins0-binary">AND R,*PTR</td>
+          <td class="ins0-binary">CMP R,Rc</td>
+          <td class="ins0-binary">CMP R,*PTR</td>
+          <td class="ins0-binary">OR R,Rc</td>
+          <td class="ins0-binary">OR R,*PTR</td>
+          <td class="ins0-binary">SHL R,Rc</td>
+          <td class="ins0-binary">SHL R,O</td>
+          <td class="ins0-binary">SHR R,Rc</td>
+          <td class="ins0-binary">SHR R,O</td>
+          <td class="ins0-binary">SHA R,Rc</td>
+          <td class="ins0-binary">SHA R,O</td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-branch">RTS</td>
-          <td class="ins0-branch">JMCP O</td>
         </tr>
         <tr>
           <th>C</th>
+          <td class="ins0-binary">SUB R,Rc</td>
+          <td class="ins0-binary">SUB R,*PTR</td>
+          <td class="ins0-binary">XOR R,Rc</td>
+          <td class="ins0-binary">XOR R,*PTR</td>
+          <td class="ins0-other">NOP</td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
@@ -1827,11 +1847,6 @@ FF0032: Set up initial program
           <td class="ins0-"></td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-status">CLC</td>
-          <td class="ins0-branch">JMP W</td>
         </tr>
         <tr>
           <th>D</th>
@@ -1849,8 +1864,8 @@ FF0032: Set up initial program
           <td class="ins0-"></td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
-          <td class="ins0-status">SEC</td>
-          <td class="ins0-branch">JMP O</td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
         </tr>
         <tr>
           <th>E</th>
@@ -1868,8 +1883,8 @@ FF0032: Set up initial program
           <td class="ins0-"></td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
-          <td class="ins0-status">CLI</td>
-          <td class="ins0-branch">JSA W</td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
         </tr>
         <tr>
           <th>F</th>
@@ -1887,8 +1902,8 @@ FF0032: Set up initial program
           <td class="ins0-"></td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
-          <td class="ins0-status">SEI</td>
-          <td class="ins0-other">NOP</td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
         </tr>
       </tbody>
     </table>
