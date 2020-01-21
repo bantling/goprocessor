@@ -152,7 +152,7 @@
         background-color: #9DCEB6;
       }
       
-      .ins0-ptr {
+      .ins0-float {
         background-color: #CC7C2C;
       }
       
@@ -190,7 +190,7 @@
         content: "0";
       }
       
-      .count-ins0-ptr::before {
+      .count-ins0-float::before {
         content: "0";
       }
       
@@ -494,35 +494,6 @@
           <td>16 bit unsigned counter step registers</td>
         </tr>
         <tr>
-          <td>CP</td>
-          <td>
-            32 bit unsigned code pointer.<br>
-            The PTR, PC, SB, SL, and SP registers are all relative to CP.<br>
-            This effectively makes all reads and writes are relative to CP.<br>
-            This allows programs to be relocatable.<br>
-            Only the TPTR registers are absolute, so that they can trigger OS routines.
-          </td>
-        </tr>
-        <tr>
-          <td>SB</td>
-          <td>32 bit unsigned stack base</td>
-        </tr>
-        <tr>
-          <td>SL</td>
-          <td>32 bit unsigned stack limit</td>
-        </tr>
-        <tr>
-          <td>SP</td>
-          <td>
-            32 bit unsigned stack pointer.<br>
-            SP starts at SL and moves downward towards SB inclusive.<br>
-            If pushing onto the stack results in SP &lt; SB,<br>
-            execute *FFFFFFF8 interrupt with R0 = 0, R1 = 1 (SP overflow).<br>
-            If pulling from the stack results in SP &gt; SL,<br>
-            execute *FFFFFFF8 interrupt with R0 = 0, R1 = 2 (SP underflow).
-          </td>
-        </tr>
-        <tr>
           <td>PC</td>
           <td>32 bit unsigned program counter</td>
         </tr>
@@ -532,6 +503,10 @@
               Carry, oVerflow, Zero, Negative, Address mode, Interrupt Disable,<br>
               Register, Pointer register, counTer register, Operand size, Math mode
           </td>
+        </tr>
+        <tr>
+          <td>SP</td>
+          <td>32 bit stack register</td>
         </tr>
       </tbody>
     </table>
@@ -692,7 +667,7 @@
           <td>Add with carry</td>
           <td>
             R = R + Rc + C<br>
-            R = R + R + *PTR<br>
+            R = R + *PTR + C<br>
             C = 1 if (H(Or) = 1 or H(Ir) = 1) and (H(Ow + Ir + C) = 0)<br>
             V = 1 if (H(Or) = H(Ir)) and (H(Or) != H(Or + Ir + C))
           </td>
@@ -702,8 +677,8 @@
           <td>AND</td>
           <td>Bitwise AND</td>
           <td>
-            R = R & Rc<br>
-            R = R & *PTR
+            R = R ∧ Rc<br>
+            R = R ∧ *PTR
           </td>
           <td>--ZN---- --------</td>
         </tr>
@@ -723,8 +698,8 @@
           <td>OR</td>
           <td>Bitwise OR</td>
           <td>
-            R = R | Rc<br>
-            R = R | *PTR
+            R = R ∨ Rc<br>
+            R = R ∨ *PTR
           </td>
           <td>--ZN---- --------</td>
         </tr>
@@ -774,8 +749,8 @@
           <td>XOR</td>
           <td>Bitwise XOR</td>
           <td>
-            R = R ^ Rc<br>
-            R = R ^ *PTR
+            R = R ⊻ Rc<br>
+            R = R ⊻ *PTR
           </td>
           <td>--ZN---- --------</td>
         </tr>
@@ -856,15 +831,6 @@
           <td>-------- --------</td>
         </tr>
         <tr>
-          <td>JMCP</td>
-          <td>Jump to an unsigned address relative to CP</td>
-          <td>
-            PC = CP + R<br>
-            PC = CP + O
-          </td>
-          <td>-------- --------</td>
-        </tr>
-        <tr>
           <td>JMP</td>
           <td>Jump to relative signed address</td>
           <td>
@@ -883,15 +849,6 @@
           <td>-------- --------</td>
         </tr>
         <tr>
-          <td>JSCP</td>
-          <td>Jump to subroutine at an unsigned address relative to CP</td>
-          <td>
-            Push PC; PC = CP + R<br>
-            Push PC; PC = CP + O
-          </td>
-          <td>-------- --------</td>
-        </tr>
-        <tr>
           <td>JSR</td>
           <td>Jump to subroutine at a relative signed address</td>
           <td>
@@ -904,11 +861,23 @@
           <td>RTI</td>
           <td>Return from interrupt</td>
           <td>
-            Pull CP<br>
+            PUL R0<br>
+            PUL R1<br>
+            PUL R2<br>
+            PUL R3<br>
+            PUL PTR0<br>
+            PUL OFS0<br>
+            PUL IX0<br>
+            PUL IS0<br>
+            PUL PTR1<br>
+            PUL OFS1<br>
+            PUL IX1<br>
+            PUL IS1<br>
+            PUL CTR0<br>
+            PUL CS0<br>
+            PUL CTR1<br>
+            PUL CS1br>
             Pull PC<br>
-            Pull SB<br>
-            Pull SL<br>
-            Pull SP<br>
             Pull ST<br>
             A hardware error occurs if the stack underflows
           </td>
@@ -919,10 +888,149 @@
           <td>Return from subroutine</td>
           <td>
             Pull PC<br>
-            SP = SP + unsigned 8-bit O; Pull PC<br>
+            SP = SP + O; Pull PC<br>
             A hardware error occurs if the stack underflows
           </td>
           <td>-------- --------</td>
+        </tr>
+        <tr>
+          <td colspan="4">Floating Point (<span class="count-ins0-float"></span> opcodes)</td>
+        </tr>
+        <tr>
+          <td>F2SF</td>
+          <td>Signed integer to floating point</td>
+          <td>
+            R(floating point) = R(signed int)
+          </td>
+          <td>--ZN--- --------</td>
+        </tr>
+        <tr>
+          <td>FABS</td>
+          <td>Absolute value</td>
+          <td>
+            R = ABS(R)
+          </td>
+          <td>--ZN--- --------</td>
+        </tr>
+        <tr>
+          <td>FACS</td>
+          <td>Arc cosine</td>
+          <td>
+            R = ARCCOS(Rc)
+          </td>
+          <td>--Z---- --------</td>
+        </tr>
+        <tr>
+          <td>FASN</td>
+          <td>Arc sine</td>
+          <td>
+            R = ARCSIN(Rc)
+          </td>
+          <td>--ZN--- --------</td>
+        </tr>
+        <tr>
+          <td>FATN</td>
+          <td>Arc tangent</td>
+          <td>
+            R = ARCTAN(Rc)
+          </td>
+          <td>--ZN--- --------</td>
+        </tr>
+        <tr>
+          <td>FCEL</td>
+          <td>Ceiling</td>
+          <td>
+            R = CEIL(R)
+          </td>
+          <td>--ZN--- --------</td>
+        </tr>
+        <tr>
+          <td>FCOS</td>
+          <td>Cosine</td>
+          <td>
+            R = COS(Rc)
+          </td>
+          <td>--ZN--- --------</td>
+        </tr>
+        <tr>
+          <td>FF2S</td>
+          <td>Floating point to signed integer</td>
+          <td>
+            R(signed int) = R(floating point)
+          </td>
+          <td>--ZN--- --------</td>
+        </tr>
+        <tr>
+          <td>FF2U</td>
+          <td>Floating point to unsigned integer</td>
+          <td>
+            R(unsigned int) = R(floating point)
+          </td>
+          <td>--ZN--- --------</td>
+        </tr>
+        <tr>
+          <td>FFLR</td>
+          <td>Floor</td>
+          <td>
+            R = FLOOR(R)
+          </td>
+          <td>--ZN--- --------</td>
+        </tr>
+        <tr>
+          <td>FLOG</td>
+          <td>Logarithm base 10</td>
+          <td>
+            R = LOG10(Rc)
+          </td>
+          <td>--ZN--- --------</td>
+        </tr>
+        <tr>
+          <td>FNLG</td>
+          <td>Logarithm base E</td>
+          <td>
+            R = LOGE(Rc)
+          </td>
+          <td>--ZN--- --------</td>
+        </tr>
+        <tr>
+          <td>FPOW</td>
+          <td>Power</td>
+          <td>
+            R = R ^ Rc
+          </td>
+          <td>-VZN--- --------</td>
+        </tr>
+        <tr>
+          <td>FSIN</td>
+          <td>Sine</td>
+          <td>
+            R = SIN(Rc)
+          </td>
+          <td>--ZN--- --------</td>
+        </tr>
+        <tr>
+          <td>FSQR</td>
+          <td>Square root</td>
+          <td>
+            R = √Rc
+          </td>
+          <td>--ZN--- --------</td>
+        </tr>
+        <tr>
+          <td>FTAN</td>
+          <td>Tangent</td>
+          <td>
+            R = TAN(Rc)
+          </td>
+          <td>--ZN--- --------</td>
+        </tr>
+        <tr>
+          <td>FU2F</td>
+          <td>Unsigned integer to floating point</td>
+          <td>
+            R(floating point) = R(unsigned int)
+          </td>
+          <td>--ZN--- --------</td>
         </tr>
         <tr>
           <td colspan="4">Move and swap (<span class="count-ins0-move"></span> opcodes)</td>
@@ -931,8 +1039,6 @@
           <td>MOV</td>
           <td>Move data</td>
           <td>
-            MOV R,Rc<br>
-            MOV Rc,R<br>
             SWP R,Rc<br>
             MOV R,PTR<br>
             MOV PTR,R<br>
@@ -940,28 +1046,21 @@
             MOV R,*PTR<br>
             MOV *PTR,R<br>
             SWP R,*PTR<br>
-            MOV R,O<br>
             SWP R,OFS<br>
             SWP R,IX<br>
             SWP R,IS<br>
             SWP R,CTR<br>
             SWP R,CS<br>
-            SWP R0,CP<br>
-            SWP R0,SB<br>
-            SWP R0,SL<br>
-            MOV SP,SL<br>
             MOV R,*SP[O]<br>
             MOV *SP[O],R<br>
             SWP R,*SP[O]<br>
-            MOV R0,ST<br>
-            MOV ST,R0<br>
+            MOV R,O<br>
+            SWP R,M<br>
             Operations involving *SP[O] always use an 8-bit operand
           </td>
           <td>
             --ZN---- --------<br>
-            SWP does not affect any flags<br>
-            MOV R0,ST does not affect any flags<br>
-            MOV ST,R0 affects all flags
+            SWP does not affect any flags
           </td>
         </tr>
         <tr>
@@ -1257,9 +1356,9 @@
           <td>NG1</td>
           <td>Set to -1</td>
           <td>
-            R = -1 (64 bits)<br>
+            R = -1<br>
             *PTR = -1 (current operand size)<br>
-            IS = -1 (16 bits)
+            IS = -1
           </td>
           <td>--ZN----- --------</td>
         </tr>
@@ -1278,7 +1377,7 @@
           <td>
             IX = IX + IS<br>
             CTR = CTR - CS<br>
-            CVZN are set the same as for ADC/SBB
+            CVZN are set the same as for ADD/SUB
           </td>
           <td>CVZN---- --------</td>
         </tr>
@@ -1286,9 +1385,9 @@
           <td>ONE</td>
           <td>Set to 1</td>
           <td>
-            R = 1 (64 bits)<br>
-            IS = 1 (16 bits)<br>
-            CS = 1 (16 bits)
+            R = 1<br>
+            IS = 1<br>
+            CS = 1
           </td>
           <td>--ZN---- --------</td>
         </tr>
@@ -1326,8 +1425,8 @@
           <td>ZRO</td>
           <td>Set to 0</td>
           <td>
-            R = 0 (64 bits)<br>
-            IX = 0 (16 bits)
+            R = 0<br>
+            IX = 0
           </td>
           <td>--ZN---- --------</td>
         </tr>
@@ -1558,8 +1657,8 @@ FF0032: Set up initial program
         </tr>
         <tr>
           <td>Pointer</td>
-          <td><span class="count-ins0-ptr"></span></td>
-          <td class="ins0-ptr"></td>          
+          <td><span class="count-ins0-float"></span></td>
+          <td class="ins0-float"></td>          
           
           <td>Stack</td>
           <td><span class="count-ins0-stack"></span></td>
@@ -1603,6 +1702,122 @@ FF0032: Set up initial program
       <tbody>
         <tr>
           <th>0</th>
+          <td class="ins0-binary">ADD R,Rc</td>
+          <td class="ins0-binary">ADD R,*PTR</td>
+          <td class="ins0-binary">AND R,Rc</td>
+          <td class="ins0-binary">AND R,*PTR</td>
+          <td class="ins0-binary">CMP R,Rc</td>
+          <td class="ins0-binary">CMP R,*PTR</td>
+          <td class="ins0-binary">OR R,Rc</td>
+          <td class="ins0-binary">OR R,*PTR</td>
+          <td class="ins0-binary">SHA R,Rc</td>
+          <td class="ins0-binary">SHA R,O</td>
+          <td class="ins0-binary">SHL R,Rc</td>
+          <td class="ins0-binary">SHL R,O</td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          
+        </tr>
+        <tr>
+          <th>1</th>
+          <td class="ins0-binary">SHR R,Rc</td>
+          <td class="ins0-binary">SHR R,O</td>
+          <td class="ins0-binary">SUB R,Rc</td>
+          <td class="ins0-binary">SUB R,*PTR</td>
+          <td class="ins0-binary">XOR R,Rc</td>
+          <td class="ins0-binary">XOR R,*PTR</td>
+          <td class="ins0-branch">BCC</td>
+          <td class="ins0-branch">BCS</td>
+          <td class="ins0-branch">BEQ</td>
+          <td class="ins0-branch">BMI</td>
+          <td class="ins0-branch">BNE</td>
+          <td class="ins0-branch">BPL</td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+
+        </tr>
+        <tr>
+          <th>2</th>
+          <td class="ins0-branch">BVC</td>
+          <td class="ins0-branch">BVS</td>
+          <td class="ins0-branch">JMA R</td>
+          <td class="ins0-branch">JMA O</td>
+          <td class="ins0-branch">JMP R</td>
+          <td class="ins0-branch">JMP O</td>
+          <td class="ins0-branch">JSA R</td>
+          <td class="ins0-branch">JSA O</td>
+          <td class="ins0-branch">JSR R</td>
+          <td class="ins0-branch">JSR O</td>
+          <td class="ins0-branch">RTI</td>
+          <td class="ins0-branch">RTS</td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+        </tr>
+        <tr>
+          <th>3</th>
+          <td class="ins0-branch">RTS O</td>
+          <td class="ins0-float">F2SF</td>
+          <td class="ins0-float">FABS</td>
+          <td class="ins0-float">FACS</td>
+          <td class="ins0-float">FASN</td>
+          <td class="ins0-float">FATN</td>
+          <td class="ins0-float">FCEL</td>
+          <td class="ins0-float">FCOS</td>
+          <td class="ins0-float">FF2S</td>
+          <td class="ins0-float">FF2U</td>
+          <td class="ins0-float">FFLR</td>
+          <td class="ins0-float">FLOG</td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+        </tr>
+        <tr>
+          <th>4</th>
+          <td class="ins0-float">FNLG</td>
+          <td class="ins0-float">FPOW</td>
+          <td class="ins0-float">FSIN</td>
+          <td class="ins0-float">FSQR</td>
+          <td class="ins0-float">FTAN</td>
+          <td class="ins0-float">FU2F</td>
+          <td class="ins0-move">SWP R,Rc</td>
+          <td class="ins0-move">MOV R,PTR</td>
+          <td class="ins0-move">MOV PTR,R</td>
+          <td class="ins0-move">SWP R,PTR</td>
+          <td class="ins0-move">MOV R,*PTR</td>
+          <td class="ins0-move">MOV *PTR,R</td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+        </tr>
+        <tr>
+          <th>5</th>
+          <td class="ins0-move">SWP R,*PTR</td>
+          <td class="ins0-move">SWP R,OFS</td>
+          <td class="ins0-move">SWP R,IX</td>
+          <td class="ins0-move">SWP R,IS</td>
+          <td class="ins0-move">SWP R,CTR</td>
+          <td class="ins0-move">SWP R,CS</td>
+          <td class="ins0-move">MOV R,*SP[O]</td>
+          <td class="ins0-move">MOV *SP[O],R</td>
+          <td class="ins0-move">SWP R,*SP[O]</td>
+          <td class="ins0-move">MOV R,O</td>
+          <td class="ins0-move">SWP R,M</td>
+          <td class="ins0-other">NOP</td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+        </tr>
+        <tr>
+          <th>6</th>
           <td class="ins0-stack">PSH R0</td>
           <td class="ins0-stack">PSH R1</td>
           <td class="ins0-stack">PSH R2</td>
@@ -1615,13 +1830,19 @@ FF0032: Set up initial program
           <td class="ins0-stack">PSH OFS1</td>
           <td class="ins0-stack">PSH IX1</td>
           <td class="ins0-stack">PSH IS1</td>
+
           <td class="ins0-"></td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
         </tr>
         <tr>
-          <th>1</th>
+          <th>7</th>
+          <td class="ins0-stack">PSH CTR0</td>
+          <td class="ins0-stack">PSH CS0</td>
+          <td class="ins0-stack">PSH CTR1</td>
+          <td class="ins0-stack">PSH CS1</td>
+          <td class="ins0-stack">PSH ST</td>
           <td class="ins0-stack">PUL R0</td>
           <td class="ins0-stack">PUL R1</td>
           <td class="ins0-stack">PUL R2</td>
@@ -1629,39 +1850,34 @@ FF0032: Set up initial program
           <td class="ins0-stack">PUL PTR0</td>
           <td class="ins0-stack">PUL OFS0</td>
           <td class="ins0-stack">PUL IX0</td>
+
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+        </tr>
+        <tr>
+          <th>8</th>
           <td class="ins0-stack">PUL IS0</td>
           <td class="ins0-stack">PUL PTR1</td>
           <td class="ins0-stack">PUL OFS1</td>
           <td class="ins0-stack">PUL IX1</td>
           <td class="ins0-stack">PUL IS1</td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-        </tr>
-        <tr>
-          <th>2</th>
-          <td class="ins0-stack">PSH CTR0</td>
           <td class="ins0-stack">PUL CTR0</td>
-          <td class="ins0-stack">PSH CS0</td>
           <td class="ins0-stack">PUL CS0</td>
-          <td class="ins0-stack">PSH CTR1</td>
           <td class="ins0-stack">PUL CTR1</td>
-          <td class="ins0-stack">PSH CS1</td>
           <td class="ins0-stack">PUL CS1</td>
-          <td class="ins0-stack">PSH ST</td>
           <td class="ins0-stack">PUL ST</td>
+          <td class="ins0-stack">SSP</td>
           <td class="ins0-status">CLC</td>
-          <td class="ins0-status">SEC</td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
         </tr>
         <tr>
-          <th>3</th>
+          <th>9</th>
           <td class="ins0-status">CLI</td>
-          <td class="ins0-status">SEI</td>
           <td class="ins0-status">SEA0</td>
           <td class="ins0-status">SEA1</td>
           <td class="ins0-status">SEA2</td>
@@ -1670,16 +1886,16 @@ FF0032: Set up initial program
           <td class="ins0-status">SEA5</td>
           <td class="ins0-status">SEA6</td>
           <td class="ins0-status">SEA7</td>
-          <td class="ins0-status">SET0</td>
-          <td class="ins0-status">SET1</td>
+          <td class="ins0-status">SEC</td>
+          <td class="ins0-status">SEI</td>
+          <td class="ins0-status">SEM0</td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
         </tr>
         <tr>
-          <th>4</th>
-          <td class="ins0-status">SEM0</td>
+          <th>A</th>
           <td class="ins0-status">SEM1</td>
           <td class="ins0-status">SEM2</td>
           <td class="ins0-status">SEM3</td>
@@ -1691,120 +1907,7 @@ FF0032: Set up initial program
           <td class="ins0-status">SEPS1</td>
           <td class="ins0-status">SER0</td>
           <td class="ins0-status">SER1</td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-        </tr>
-        <tr>
-          <th>5</th>
           <td class="ins0-status">SER2</td>
-          <td class="ins0-status">SER3</td>
-          <td class="ins0-move">MOV R,Rc</td>
-          <td class="ins0-move">MOV Rc,R</td>
-          <td class="ins0-move">SWP R,Rc</td>
-          <td class="ins0-move">MOV R,PTR</td>
-          <td class="ins0-move">MOV PTR,R</td>
-          <td class="ins0-move">SWP R,PTR</td>
-          <td class="ins0-move">MOV R,*PTR</td>
-          <td class="ins0-move">MOV *PTR,R</td>
-          <td class="ins0-move">SWP R,*PTR</td>
-          <td class="ins0-move">MOV R,O</td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-        </tr>
-        <tr>
-          <th>6</th>
-          <td class="ins0-move">SWP R,OFS</td>
-          <td class="ins0-move">SWP R,IX</td>
-          <td class="ins0-move">SWP R,IS</td>
-          <td class="ins0-move">SWP R,CTR</td>
-          <td class="ins0-move">SWP R,CS</td>
-          <td class="ins0-move">SWP R0,CP</td>
-          <td class="ins0-move">SWP R0,SB</td>
-          <td class="ins0-move">SWP R0,SL</td>
-          <td class="ins0-move">MOV SP,SL</td>
-          <td class="ins0-move">MOV R,*SP[O]</td>
-          <td class="ins0-move">MOV *SP[O],R</td>
-          <td class="ins0-move">SWP R,*SP[O]</td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-        </tr>
-        <tr>
-          <th>7</th>
-          <td class="ins0-move">MOV R0,ST</td>
-          <td class="ins0-move">MOV ST,R0</td>
-          <td class="ins0-branch">BCC</td>
-          <td class="ins0-branch">BCS</td>
-          <td class="ins0-branch">BNE</td>
-          <td class="ins0-branch">BEQ</td>
-          <td class="ins0-branch">BPL</td>
-          <td class="ins0-branch">BMI</td>
-          <td class="ins0-branch">BVC</td>
-          <td class="ins0-branch">BVS</td>
-          <td class="ins0-branch">JMA R</td>
-          <td class="ins0-branch">JMA O</td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-        </tr>
-        <tr>
-          <th>8</th>
-          <td class="ins0-branch">JMCP R</td>
-          <td class="ins0-branch">JMCP O</td>
-          <td class="ins0-branch">JMP R</td>
-          <td class="ins0-branch">JMP O</td>
-          <td class="ins0-branch">JSA R</td>
-          <td class="ins0-branch">JSA O</td>
-          <td class="ins0-branch">JSCP R</td>
-          <td class="ins0-branch">JSCP O</td>
-          <td class="ins0-branch">JSR R</td>
-          <td class="ins0-branch">JSR O</td>
-          <td class="ins0-branch">RTI</td>
-          <td class="ins0-branch">RTS</td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-        </tr>
-        <tr>
-          <th>9</th>
-          <td class="ins0-branch">RTS O</td>
-          <td class="ins0-unary">DEC R</td>
-          <td class="ins0-unary">INC R</td>
-          <td class="ins0-unary">NEG R</td>
-          <td class="ins0-unary">NOT R</td>
-          <td class="ins0-unary">NXT IX</td>
-          <td class="ins0-unary">ZRO R</td>
-          <td class="ins0-unary">NG1 R</td>
-          <td class="ins0-unary">NG1 *PTR</td>
-          <td class="ins0-unary">NG1 IS</td>
-          <td class="ins0-unary">SHLC R</td>
-          <td class="ins0-unary">SHAC R</td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-        </tr>
-        <tr>
-          <th>A</th>
-          <td class="ins0-unary">DEC *PTR</td>
-          <td class="ins0-unary">INC *PTR</td>
-          <td class="ins0-unary">NEG *PTR</td>
-          <td class="ins0-unary">NOT *PTR</td>
-          <td class="ins0-unary">NXT CTR</td>
-          <td class="ins0-unary">ZRO IX</td>
-          <td class="ins0-unary">ONE R</td>
-          <td class="ins0-unary">ONE IS</td>
-          <td class="ins0-unary">ONE CS</td>
-          <td class="ins0-unary">SHRC R</td>
-          <td class="ins0-binary">ADD R,Rc</td>
-          <td class="ins0-binary">ADD R,*PTR</td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
@@ -1812,18 +1915,18 @@ FF0032: Set up initial program
         </tr>
         <tr>
           <th>B</th>
-          <td class="ins0-binary">AND R,Rc</td>
-          <td class="ins0-binary">AND R,*PTR</td>
-          <td class="ins0-binary">CMP R,Rc</td>
-          <td class="ins0-binary">CMP R,*PTR</td>
-          <td class="ins0-binary">OR R,Rc</td>
-          <td class="ins0-binary">OR R,*PTR</td>
-          <td class="ins0-binary">SHL R,Rc</td>
-          <td class="ins0-binary">SHL R,O</td>
-          <td class="ins0-binary">SHR R,Rc</td>
-          <td class="ins0-binary">SHR R,O</td>
-          <td class="ins0-binary">SHA R,Rc</td>
-          <td class="ins0-binary">SHA R,O</td>
+          <td class="ins0-status">SER3</td>
+          <td class="ins0-status">SET0</td>
+          <td class="ins0-status">SET1</td>
+          <td class="ins0-unary">DEC R</td>
+          <td class="ins0-unary">DEC *PTR</td>
+          <td class="ins0-unary">INC R</td>
+          <td class="ins0-unary">INC *PTR</td>
+          <td class="ins0-unary">NEG R</td>
+          <td class="ins0-unary">NEG *PTR</td>
+          <td class="ins0-unary">NG1 R</td>
+          <td class="ins0-unary">NG1 *PTR</td>
+          <td class="ins0-unary">NG1 IS</td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
@@ -1831,18 +1934,18 @@ FF0032: Set up initial program
         </tr>
         <tr>
           <th>C</th>
-          <td class="ins0-binary">SUB R,Rc</td>
-          <td class="ins0-binary">SUB R,*PTR</td>
-          <td class="ins0-binary">XOR R,Rc</td>
-          <td class="ins0-binary">XOR R,*PTR</td>
-          <td class="ins0-other">NOP</td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
+          <td class="ins0-unary">NOT R</td>
+          <td class="ins0-unary">NOT *PTR</td>
+          <td class="ins0-unary">NXT IX</td>
+          <td class="ins0-unary">NXT CTR</td>
+          <td class="ins0-unary">ONE R</td>
+          <td class="ins0-unary">ONE IS</td>
+          <td class="ins0-unary">ONE CS</td>
+          <td class="ins0-unary">SHAC R</td>
+          <td class="ins0-unary">SHLC R</td>
+          <td class="ins0-unary">SHRC R</td>
+          <td class="ins0-unary">ZRO R</td>
+          <td class="ins0-unary">ZRO IX</td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
