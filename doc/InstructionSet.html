@@ -646,6 +646,8 @@
       <li>OP1,OP2 = Operands of last CMP instruction</li>
       <li>Ir = Input register or data</li>
       <li>Or = Output register</li>
+      <li>U,S,O = (U)n(S)igned (O)perand of current size</li>
+      <li>U8,U16,U32,U64,S8,S16,S32,S64 = (U)n(S)signed operand of specific size</li>
       <li>H = Highest bit, depends on operand size (bit 7, 15, 31, or 63)</li>
       <li>An apostrophe indicates the value after the instruction has executed</li>
     </ul>
@@ -708,7 +710,7 @@
           <td>Shift bits right, arithmetic</td>
           <td>
             R = R &gt;&gt; Rc<br>
-            R = R &gt;&gt; O<br>
+            R = R &gt;&gt; U8<br>
             Highest Rc bits of R &gt;&gt; Rc = H(R), causing the sign of R to remain the same<br>
             C = 1 if any of the lower Rc bits of R are set
           </td>
@@ -719,7 +721,7 @@
           <td>Shift bits left</td>
           <td>
             R = R &lt;&lt; Rc<br>
-            R = R &lt;&lt; O<br>
+            R = R &lt;&lt; U8<br>
             C = 1 if any of the upper Rc bits of R are set
           </td>
           <td>C-ZN---- --------</td>
@@ -729,7 +731,7 @@
           <td>Shift bits right</td>
           <td>
             R = R &gt;&gt; Rc<br>
-            R = R &gt;&gt; O<br>
+            R = R &gt;&gt; U8<br>
             C = 1 if any of the lower Rc bits of R are set
           </td>
           <td>C-ZN---- --------</td>
@@ -761,7 +763,7 @@
           <td>BCC (BLTU, BNANC)</td>
           <td>Branch on carry clear (Op1 &lt; Op2 unsigned, FP result is not NaN)</td>
           <td>
-            PC = PC + O if C = 0
+            PC = PC + S8 if C = 0
           </td>
           <td>-------- --------</td>
         </tr>
@@ -769,7 +771,7 @@
           <td>BCS (BGEU, BNANS)</td>
           <td>Branch on carry set (Op1 &gt;= Op2 unsigned, FP result is NaN)</td>
           <td>
-            PC = PC + O if C = 1
+            PC = PC + S8 if C = 1
           </td>
           <td>-------- --------</td>
         </tr>
@@ -777,7 +779,7 @@
           <td>BEQ</td>
           <td>Branch on equal to zero (Op1 = Op2)</td>
           <td>
-            PC = PC + O if Z = 1
+            PC = PC + S8 if Z = 1
           </td>
           <td>-------- --------</td>
         </tr>
@@ -785,7 +787,7 @@
           <td>BMI</td>
           <td>Branch on negative</td>
           <td>
-            PC = PC + O if N = 1
+            PC = PC + S8 if N = 1
           </td>
           <td>-------- --------</td>
         </tr>
@@ -793,7 +795,7 @@
           <td>BNE</td>
           <td>Branch on not equal to zero (Op1 != Op2)</td>
           <td>
-            PC = PC + O if Z = 0
+            PC = PC + S8 if Z = 0
           </td>
           <td>-------- --------</td>
         </tr>
@@ -801,7 +803,7 @@
           <td>BPL</td>
           <td>Branch on positive</td>
           <td>
-            PC = PC + O if N = 0
+            PC = PC + S8 if N = 0
           </td>
           <td>-------- --------</td>
         </tr>
@@ -809,7 +811,7 @@
           <td>BVC (BLTS, BDZC)</td>
           <td>Branch on overflow clear (Op1 &lt; Op2 signed, Divide by zero clear)</td>
           <td>
-            PC = PC + O if V = 0
+            PC = PC + S8 if V = 0
           </td>
           <td>-------- --------</td>
         </tr>
@@ -817,7 +819,7 @@
           <td>BVS (BGES, BDZS)</td>
           <td>Branch on overflow set (Op1 &gt;= Op2 signed, Divide by zero set)</td>
           <td>
-            PC = PC + O if V = 1
+            PC = PC + S8 if V = 1
           </td>
           <td>-------- --------</td>
         </tr>
@@ -826,7 +828,7 @@
           <td>Jump to an absolute unsigned address</td>
           <td>
             PC = R<br>
-            PC = O
+            PC = U32
           </td>
           <td>-------- --------</td>
         </tr>
@@ -835,7 +837,7 @@
           <td>Jump to relative signed address</td>
           <td>
             PC = PC + R<br>
-            PC = PC + O
+            PC = PC + S16
           </td>
           <td>-------- --------</td>
         </tr>
@@ -844,7 +846,7 @@
           <td>Jump to subroutine at an absolute unsigned address</td>
           <td>
             Push PC; PC = R<br>
-            Push PC; PC = O
+            Push PC; PC = U32
           </td>
           <td>-------- --------</td>
         </tr>
@@ -853,7 +855,7 @@
           <td>Jump to subroutine at a relative signed address</td>
           <td>
             Push PC; PC = PC + R<br>
-            Push PC; PC = PC + O
+            Push PC; PC = PC + S16
           </td>
           <td>-------- --------</td>
         </tr>
@@ -888,7 +890,7 @@
           <td>Return from subroutine</td>
           <td>
             Pull PC<br>
-            SP = SP + O; Pull PC<br>
+            SP = SP + U8; Pull PC<br>
             A hardware error occurs if the stack underflows
           </td>
           <td>-------- --------</td>
@@ -1051,12 +1053,11 @@
             SWP R,IS<br>
             SWP R,CTR<br>
             SWP R,CS<br>
-            MOV R,*SP[O]<br>
-            MOV *SP[O],R<br>
-            SWP R,*SP[O]<br>
+            MOV R,*SP[U8]<br>
+            MOV *SP[U8],R<br>
+            SWP R,*SP[U8]<br>
             MOV R,O<br>
-            SWP R,M<br>
-            Operations involving *SP[O] always use an 8-bit operand
+            SWP R,M
           </td>
           <td>
             --ZN---- --------<br>
@@ -1140,9 +1141,8 @@
           <td>SSP</td>
           <td>Subtract from stack pointer</td>
           <td>
-            If SP - O &lt; SB execute *FFFFFFF8 interrupt with R0 = 0, R1 = 1 (SP overflow)<br>
-            SP = SP - O<br>
-            Operand size is always 8 bits
+            If SP - U8 &lt; SB execute *FFFFFFF8 interrupt with R0 = 0, R1 = 1 (SP overflow)<br>
+            SP = SP - U8
           </td>
           <td>--------- --------</td>
         </tr>
@@ -1441,9 +1441,6 @@
       while a 16-bit operand allows a jump in the range of [-32765, 32770].
     </p>
     <p>
-      JMCP/JSCP Allow jumps with a 32-bit unsigned address relative to the CP to jump anywhere within the current program.
-    </p>
-    <p>
       JMA/JSA Allow jumps with an absolute 32-bit usigned address to any code in the system, to allow for kernel jump tables.
     </p>
     <h2>Interrupts</h2>
@@ -1454,7 +1451,7 @@
         at the start of a critical section, and clear it at the end, whether the routine is a main program or an
         interrupt routine.
       </li>
-      <li>An interrupt can only occur after the current instruction has completed, and pushes the address of the
+      <li>An interrupt can only occur after the current instruction has completed, and pushes all registers and the address of the
         following instruction.
       </li>
       <li>Each interrupt pointer address represents a unique kind of interrupt. Once an interrupt of a given kind is
@@ -1465,17 +1462,12 @@
       <li>An interrupt routine can be interrupted during a non-critical section by another kind of interrupt of higher
         priority, but it cannot be interrupted by another kind of interrupt of lower priority.
       </li>
-      <li>Interrupts push the PC and ST registers in that order.</li>
       <li>Interrupts must end with an RTI instruction to signal that the interrupt has completed handling. RTI pulls the
-        ST and PC registers in that order.
+        all registers and PC in the opposite order pushed when an interrupt occurs.
       </li>
-      <li>Interrupt routines should only use branches and absolute jumps/jsrs, since relative jumps/jsrs are relative to
-        the CP register, which is not pushed.
-      </li>
-      <li>It is up to the interrupt routine to preserve any other registers it modifies. Since a given kind of
-        interrupt cannot be interrupted by the same kind of interrupt before completion, a given kind of interrupt may
-        use the stack or a reserved memory area dedicated to that specific kind of interrupt to preserve registers
-        and/or hold intermediate values.
+      <li>Interrupts are invoked by using a memory address to contain the pointer</li>
+      <li>FFFFFFFC = startup pointer</li>
+      <li>FFFFFFF8 = instruction error interrupt pointer</li>
       </li>
       <li>The following implications occur as a result of the above statements:
         <ol>
@@ -1489,7 +1481,7 @@
           <li>Stack handling</li>
             <ul>
               <li>Clearing interrupt disable immediately before returning provides an opportunity to interrupt the
-                current routine just before returning and executoing another interrupt, increasing the size of the
+                current routine just before returning and executing another interrupt, increasing the size of the
                 stack.
               </li>
               <li>Purposely not clearing the interrupt disable flag in the above situation prevents another interrupt
@@ -1521,7 +1513,6 @@
                 there is no explicit clearing of the interrupt Disable flag.</li>
               <li>Since the first instruction sets interrupt Disable, and the entire routine is a critical section,
                 there is no opportunity for another interrupt to occur, even one of higher priority.</li>
-              <li>Technically, there should be no higher priority interrupts.</li>
             </ul>
           </li>
         </ol>
@@ -1531,28 +1522,8 @@
     <h2>General Information</h2>
     <ol>
       <li>The processor is little endian - the highest byte is stored first, the lowest byte last</li>
-      <li>8 24-bit interrupt pointers are defined, called INT 0 thru INT 7<br>
-        INT 7 = non-maskable interrupt pointer, called by hardware reset and hardware errors
-      </li>
-      <li>Interrupts that provide a single byte of data to the routine can simply use the byte following the pointer.</li>
-      <li>On a reset or hardware error, the byte following the INT 7 interrupt pointer has the following values:
-        <ul>
-          <li>On reset bit 0 = 0</li>
-          <li>On hardware errors, bit 0 = 1
-            <ul>
-              <li>Stack overflow sets bit 1 = 0</li>
-              <li>Stack underflow sets bit 1 = 1</li>
-            </ul>
-          </li>
-        </ul>
-      </li>
-      <li>The stack is 64k in size, and can point to any address.</li>
-      <li>The stack base SB is the bottom, the top is SB + 0x00FFFF.</li>
-      <li>If the SB is set to a value > 0xFF0000, then it is possible for the stack to wrap past 0xFFFFFF to 0x000000 if the
-        SP has a large enough value. This can be prevented by setting an appropriate initial value for SP.</li>
-      <li>When an address is pushed on the stack (eg, hardware interrupt, JSR, etc), it is pushed in little endian
-        order, to make it easy to modify addresses on the stack.</li>
-      <li>Since there is no software interrupt instruction, use JSX to call an address containing a JMX instruction that
+      <li>The stack is 64k in size, the location is an implementation detail.</li>
+      <li>Since there is no software interrupt instruction, use JSA to call an address containing a JMA instruction that
         calls the actual routine at an OS defined address. Such a jump table provides well-known addresses for users to
         call OS routines, while allowing the OS routines to be moved around as they are updated.
       </li>
@@ -1560,65 +1531,11 @@
     
     <h2>Startup information</h2>
     <ul>
-      <li>Registers have undefined values on initial hardware reset. They are undefined on startup simply because the
+      <li>Registers have undefined values on initial reset. They are undefined simply because the
         user can cause a reset at anytime after startup, in which case the registers will hold whatever values the
         current routine being interrupted happens to be using.
       </li>
-      <li>Hardware errors should be handled by killing the current program. In a simple system designed to only run one
-        program at a time, hardware errors can simply do the same thing as a reset.
-      </li>
-      <li>A simple layout is to have OS code, data, jump table, and pointers fit into the last 64k segment:
-        <ul>
-          <li>FF0000 - FFBFFF: 48KB code</li>
-          <li>FFC000 - FFDFFF: 8KB data</li>
-          <li>FFE000 - FFFBFF: 7KB stack space</li>
-          <li>FFFC00 - FFFFDF: 992 bytes for 248 JMX instructions for OS jump table, aligned on 4-byte boundaries
-          <li>FFFFE0 - FFFFFF: 32 bytes for 8 24-bit interrupt pointers, aligned on 4-byte boundaries</li>
-        </ul>
-      </li>
-      <li>Example of CPU executing non-maskable interrupt (INT 7 at FFFFFC - FFFFFE) at startup or any other time, that
-        handles resets and hardware errors in the same way:
-        <ul>
-          <li>FFFFFC = 24-bit address FF0000, so that execution starts at the beginning of the last 64k segment</li>
-          <li>Handler at FF0000 just sets up the stack location with values for ST and PC on it, then execute RTI to
-             call reset routine:
-<pre>
-FF0000: MOV EX, FFE000      ;SB = FFE000
-FF0004: MOV SB, EX
-FF0005: MOV W0, 1BFB        ;SP = 1BFB, FFE000 + 1BFB = FFFBFB, as if 4 bytes have been pushed on stack
-FF0008: MOV SP, W0
-FF0009: MOV $FFFBFC, 0      ;FFFBFC = ST on stack = 0
-FF000D: MOV $FFFBFD, FF0012 ;FFFBFD = PC on stack = FF0012
-FF0011: RTI
-</pre>
-          <li>Reset routine should initialize to known conditions and execute some initial program:
-<pre>
-FF0012: MOV R0, 1      ;CS, IS = 1 
-FF0014: SWP R0, CS
-FF0015: MOV R0, 1
-FF0017: SWP R0, IS
-FF0018: MOV R0, 0      ;R0, R1, R23, R3, CX, IX = 0
-FF001A: MOV R1, R0
-FF001B: MOV R2, R0
-FF001C: MOV R3, R0
-FF001D: ZRO CX
-FF001E: ZRO IX
-FF001F: MOV EX, FF0000 ;CP = FF0000 
-FF0023: MOV CP, EX
-FF0024: MOV EX, FFC000 ;DP = FFC000
-FF0028: MOV DP, EX
-FF0029: MOV EX, FFE000 ;SB = FFE000
-FF002D: MOV SB, EX
-FF002E: MOV W0, 1BFF   ;SP = 1BFF, FFE000 + 1BFF = FFFBFF, as if 0 bytes have been pushed on stack
-FF0031: MOV SP, W0
-FF0032: Set up initial program
-</pre>
-          </li>
-          <li>Note that the kernel jump table could contain an entry that points to FF0012 to allow programs to call the
-            reset function if necessary.
-          </li>
-        </ul> 
-      </li>
+      <li>Hardware errors can be handled by simply using JMA with the startup pointer.</li>
     </ul>
     
     <h2>Opcodes</h2>
@@ -1711,9 +1628,9 @@ FF0032: Set up initial program
           <td class="ins0-binary">OR R,Rc</td>
           <td class="ins0-binary">OR R,*PTR</td>
           <td class="ins0-binary">SHA R,Rc</td>
-          <td class="ins0-binary">SHA R,O</td>
+          <td class="ins0-binary">SHA R,U8</td>
           <td class="ins0-binary">SHL R,Rc</td>
-          <td class="ins0-binary">SHL R,O</td>
+          <td class="ins0-binary">SHL R,U8</td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
@@ -1723,17 +1640,17 @@ FF0032: Set up initial program
         <tr>
           <th>1</th>
           <td class="ins0-binary">SHR R,Rc</td>
-          <td class="ins0-binary">SHR R,O</td>
+          <td class="ins0-binary">SHR R,U8</td>
           <td class="ins0-binary">SUB R,Rc</td>
           <td class="ins0-binary">SUB R,*PTR</td>
           <td class="ins0-binary">XOR R,Rc</td>
           <td class="ins0-binary">XOR R,*PTR</td>
-          <td class="ins0-branch">BCC</td>
-          <td class="ins0-branch">BCS</td>
-          <td class="ins0-branch">BEQ</td>
-          <td class="ins0-branch">BMI</td>
-          <td class="ins0-branch">BNE</td>
-          <td class="ins0-branch">BPL</td>
+          <td class="ins0-branch">BCC S8</td>
+          <td class="ins0-branch">BCS S8</td>
+          <td class="ins0-branch">BEQ S8</td>
+          <td class="ins0-branch">BMI S8</td>
+          <td class="ins0-branch">BNE S8</td>
+          <td class="ins0-branch">BPL S8</td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
@@ -1742,16 +1659,16 @@ FF0032: Set up initial program
         </tr>
         <tr>
           <th>2</th>
-          <td class="ins0-branch">BVC</td>
-          <td class="ins0-branch">BVS</td>
+          <td class="ins0-branch">BVC S8</td>
+          <td class="ins0-branch">BVS S8</td>
           <td class="ins0-branch">JMA R</td>
-          <td class="ins0-branch">JMA O</td>
+          <td class="ins0-branch">JMA U32</td>
           <td class="ins0-branch">JMP R</td>
-          <td class="ins0-branch">JMP O</td>
+          <td class="ins0-branch">JMP S16</td>
           <td class="ins0-branch">JSA R</td>
-          <td class="ins0-branch">JSA O</td>
+          <td class="ins0-branch">JSA U32</td>
           <td class="ins0-branch">JSR R</td>
-          <td class="ins0-branch">JSR O</td>
+          <td class="ins0-branch">JSR S16</td>
           <td class="ins0-branch">RTI</td>
           <td class="ins0-branch">RTS</td>
           <td class="ins0-"></td>
@@ -1761,7 +1678,7 @@ FF0032: Set up initial program
         </tr>
         <tr>
           <th>3</th>
-          <td class="ins0-branch">RTS O</td>
+          <td class="ins0-branch">RTS U8</td>
           <td class="ins0-float">F2SF</td>
           <td class="ins0-float">FABS</td>
           <td class="ins0-float">FACS</td>
@@ -1805,9 +1722,9 @@ FF0032: Set up initial program
           <td class="ins0-move">SWP R,IS</td>
           <td class="ins0-move">SWP R,CTR</td>
           <td class="ins0-move">SWP R,CS</td>
-          <td class="ins0-move">MOV R,*SP[O]</td>
-          <td class="ins0-move">MOV *SP[O],R</td>
-          <td class="ins0-move">SWP R,*SP[O]</td>
+          <td class="ins0-move">MOV R,*SP[U8]</td>
+          <td class="ins0-move">MOV *SP[U8],R</td>
+          <td class="ins0-move">SWP R,*SP[U8]</td>
           <td class="ins0-move">MOV R,O</td>
           <td class="ins0-move">SWP R,M</td>
           <td class="ins0-other">NOP</td>
@@ -1868,7 +1785,7 @@ FF0032: Set up initial program
           <td class="ins0-stack">PUL CTR1</td>
           <td class="ins0-stack">PUL CS1</td>
           <td class="ins0-stack">PUL ST</td>
-          <td class="ins0-stack">SSP</td>
+          <td class="ins0-stack">SSP U8</td>
           <td class="ins0-status">CLC</td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
