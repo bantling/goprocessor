@@ -458,15 +458,15 @@
         <tr>
           <td>R0 - R3</td>
           <td>
-            64 bit signed general purpose registers that work in two pairs: (R0, R1) and (R2, R3).<br>
+            64 bit (un)signed general purpose registers that work in two pairs: (R0, R1) and (R2, R3).<br>
             Instructions that require two of these registers will work with a pair,<br>
             where one register is referred to as the complement:<br>
             R0 complement = R1<br>
             R1 complement = R0<br>
             R2 complement = R3<br>
             R3 complement = R2<br>
-            When a literal operand or memory is loaded into a register, and the current operand size<br>
-            is less than 64 bits, the highest bit of the operand is copied into the upper bits.
+            When a literal or memory operand is loaded into a register, and the current operand size<br>
+            is less than 64 bits, the highest bit of the operand is copied into the upper bits to extend the sign.
           </td>
         </tr>
         <tr>
@@ -499,14 +499,22 @@
         </tr>
         <tr>
           <td>ST</td>
-          <td>16 bit status register, consists of CVZNAAAS RRPTOOMM:<br>
-              Carry, oVerflow, Zero, Negative, Address mode, Interrupt Disable,<br>
-              Register, Pointer register, counTer register, Operand size, Math mode
+          <td>32 bit status register, consists of CVZNAAAI RRPTOOMM SSSSSSSS UUUUUUUU:<br>
+              Carry, oVerflow, Zero, Negative, Address mode, Interrupt Disable<br>
+              Register, Pointer register, counTer register, Operand size, Math mode<br>
+              There are 8 bits reserved for system use, and 8 bits reserved for users.
+          </td>
+        </tr>
+        <tr>
+          <td>SB</td>
+          <td>
+            32 bit stack base register<br>
+            Default location is FFFE0000 (second highest 64k)
           </td>
         </tr>
         <tr>
           <td>SP</td>
-          <td>32 bit stack register</td>
+          <td>16 bit stack pointer register</td>
         </tr>
       </tbody>
     </table>
@@ -539,15 +547,15 @@
         <tr>
           <td>AAA</td>
           <td>
-            Address Mode (PTR = 100, OFS = 25, IX = 400, address 100 has 32 bit pointer to address 200)<br>
-            000 = *PTR: PTR = 100<br>
-            001 = *(PTR): PTR + OFS = 125<br>
-            010 = *[PTR]: PTR + IX = 500<br>
-            011 = *([PTR]): PTR + IX + OFS = 525<br>
-            100 = **PTR: **PTR = 200<br>
-            101 = **(PTR): **PTR + OFS = 200 + 25 = 225<br>
-            110 = **[PTR]: **PTR + IX = 200 + 400 = 600<br>
-            111 = **([PTR]): **PTR + IX + OFS = 200 + 400 + 25 = 625
+            Address Mode (PTR = 100, OFS = 25, IX = 400, address 100 has pointer to address 200)<br>
+            000 = *PTR = PTR = 100<br>
+            001 = *(PTR) = PTR + OFS = 125<br>
+            010 = *[PTR] = PTR + IX = 500<br>
+            011 = *([PTR]) = PTR + IX + OFS = 525<br>
+            100 = **PTR = *PTR = 200<br>
+            101 = **(PTR): *PTR + OFS = 200 + 25 = 225<br>
+            110 = **[PTR]: *PTR + IX = 200 + 400 = 600<br>
+            111 = **([PTR]): *PTR + IX + OFS = 200 + 400 + 25 = 625
           </td>
         </tr>
         <tr>
@@ -591,42 +599,37 @@
             10 = Fixed Point<br>
             11 = Floating Point<br>
             <br>
-            The decimal mode always affects the ADC, SBB, MUL, DIV, and CMP instructions<br>
-            The floating point instructions (FS2F, FABS, FPOW, etc) always assume registers contain floating point values<br>
-            The floating point mode is only required for ADC, SBB, MUL, DIV, and CMP<br>
+            The math mode only affects ADC, SBB, MUL, DIV, and CMP.<br>
             <br>
             Integer Mode:<br>
-            For ADC, SBB, and MUL, Carry and overflow are (un)signed carry and overflow<br>
-            For DIV, Carry is modulo, overflow has no meaning<br>
-            The relevant CVZN flags are modified on each instruction<br>
-            Highest bit is sign bit if using signed math<br>
+            Carry and Overflow are (un)signed carry and overflow.<br>
+            For DIV, the quotient and remainder are stored in the selected register and complement.<br>
+            For MUL, the result is twice as many bits.<br>
+            For 64-bit MUL, the 128-bit product is split across (R0, R1) or (R2, R3), where R0 or R2 is highest 64 bits.<br>
+            Highest bit is sign bit if using signed math.<br>
             <br>
             Fractional Mode:<br>
-            For ADC, SBB, and MUL, Carry and overflow are (un)signed carry and overflow<br>
-            For DIV, Carry and overflow have no meaning<br>
-            The relevant CVZN flags are modified on each instruction<br>
-            A Register is split into numerator (upper half) and denominator (lower half)<br>
-            Highest bit is sign bit if using signed math<br>
-            Denominator is always unsigned<br>
+            A register is split into numerator (upper half) and denominator (lower half).<br>
+            Numerator highest bit is sign bit if using signed math.<br> 
+            Denominator is always unsigned.<br>
+            If operand size is 8 bits, a 16 bit value is used.<br>
+            Otherwise operates like Integer Mode.<br>
             <br>
             Fixed Point Mode:<br>
-            When operand size is 8 bits, 16 bits are used instead<br>
             Scaling factor and min/max range limited to decimal values:<br>
-            16 bits: scaling factor = 10^-2, range = +/-99.99<br>
-            32 bits: scaling factor = 10^-4, range = +/-99,999.9999<br>
-            64 bits: scaling factor = 10^-8, range = +/-99,999,999,999.99999999<br>
-            For ADC, SBB, and MUL, Carry has no meaning and overflow is overflow<br>
-            For DIV, Carry is modulo, overflow has no meaning<br>
-            The relevant CVZN flags are modified on each instruction<br>
-            Highest bit is always sign bit, no unsigned math<br>
+            16 bits: scaling factor = 10^-2, range = +/-99.99.<br>
+            32 bits: scaling factor = 10^-4, range = +/-99,999.9999.<br>
+            64 bits: scaling factor = 10^-8, range = +/-99,999,999,999.99999999.<br>
+            If operand size is 8 bits, a 16 bit value is used.<br>
+            Otherwise operates like Integer Mode.<br>
             <br>
             Floating Point Mode:<br>
-            Carry = NaN<br>
-            Overflow = Divide By Zero<br>
-            ZN have usual meaning<br>
-            The relevant CVZN flags are modified on each instruction<br>
-            No unsigned math<br>
-            Implemented as IEEE 754 Half Precision (16 bits), Single Precision (32 bits), or Double Precision (64 bits)<br>
+            Carry = NaN.<br>
+            Overflow = Divide By Zero.<br>
+            ZN have usual meaning.<br>
+            No unsigned math.<br>
+            Implemented as IEEE 754 Half Precision (16 bits), Single Precision (32 bits), or Double Precision (64 bits).<br>
+            If operand size is 8 bits, a 16 bit value is used.
           </td>
         </tr>
       </tbody>
@@ -636,6 +639,7 @@
     <ul>
       <li>R = Selected general purpose register</li>
       <li>Rc = Complement of selected general purpose register</li>
+      <li>Rx, Ry is either R0, R1 or R2, R3</li>
       <li>PTR = Selected pointer register</li>
       <li>*PTR = Selected pointer register data in current addressing mode</li>
       <li>OFS = Selected offset register</li>
@@ -670,7 +674,7 @@
           <td>
             R = R + Rc + C<br>
             R = R + *PTR + C<br>
-            C = 1 if (H(Or) = 1 or H(Ir) = 1) and (H(Ow + Ir + C) = 0)<br>
+            C = 1 if (H(Or) = 1 or H(Ir) = 1) and (H(Or + Ir + C) = 0)<br>
             V = 1 if (H(Or) = H(Ir)) and (H(Or) != H(Or + Ir + C))
           </td>
           <td>CVZN---- --------</td>
@@ -695,6 +699,35 @@
             Z = 1 if R = Rc/*PTR
           </td>
           <td>CVZ----- --------</td>
+        </tr>
+        <tr>
+          <td>DIV</td>
+          <td>Division</td>
+          <td>
+            R' = R / Rc; Rc' = R mod Rc<br>
+            R' = R / *PTR; Rc' = R mod *PTR<br>
+            C and V are only set in floating point mode<br>
+            If denominator is zero:<br>
+            If math mode is floating point, result is +/- infinity,<br>
+            else execute *FFFFFFFC interrupt with R0 = 3 (division by zero)
+          </td>
+          <td>CVZN---- --------</td>
+        </tr>
+        <tr>
+          <td>MUL</td>
+          <td>Multiply</td>
+          <td>
+            When OO = 00, 01, or 10:<br>
+            R = R * Rc<br>
+            R = R * *PTR<br>
+            When OO = 11:<br>
+            Rx, Ry = R * Rc<br>
+            Rx, Ry = R * *PTR<br>
+            Rx is upper 64 bits, Ry is lower 64 bits<br>
+            C = 1 if (H(Or) = 1 or H(Ir) = 1) and (H(Or + Ir + C) = 0)<br>
+            V = 1 if (H(Or) = H(Ir)) and (H(Or) != H(Or + Ir + C))
+          </td>
+          <td>CVZN---- --------</td>
         </tr>
         <tr>
           <td>OR</td>
@@ -744,6 +777,26 @@
             R = R - *PTR - C<br>
             C = 1 if (Rc/*PTR + C) > Or unsigned<br>
             V = 1 if (H(Or) != H(Ir)) and (H(Rc/*PTR) = H(R - Rc/*PTR - C))<br>
+          </td>
+          <td>CVZN---- --------</td>
+        </tr>
+        <tr>
+          <td>TCLR</td>
+          <td>Test bits clear</td>
+          <td>
+            R = pattern to test, Rc = value to test<br>
+            R = pattern to test, *PTR = value to test<br>
+            Z = 1 if every bit set in R is clear in Rc/*PTR
+          </td>
+          <td>CVZN---- --------</td>
+        </tr>
+        <tr>
+          <td>TSET</td>
+          <td>Test bits set</td>
+          <td>
+            R = pattern to test, Rc = value to test<br>
+            R = pattern to test, *PTR = value to test<br>
+            Z = 1 if every bit set in R is set in Rc/*PTR
           </td>
           <td>CVZN---- --------</td>
         </tr>
@@ -801,7 +854,7 @@
         </tr>
         <tr>
           <td>BPL</td>
-          <td>Branch on positive</td>
+          <td>Branch on positive (or zero)</td>
           <td>
             PC = PC + S8 if N = 0
           </td>
@@ -1041,27 +1094,37 @@
           <td>MOV</td>
           <td>Move data</td>
           <td>
-            SWP R,Rc<br>
             MOV R,PTR<br>
             MOV PTR,R<br>
-            SWP R,PTR<br>
             MOV R,*PTR<br>
             MOV *PTR,R<br>
+            MOV R,*SP[U8]<br>
+            MOV *SP[U8],R<br>
+            MOV R,O
+          </td>
+          <td>
+            --ZN---- --------<br>
+          </td>
+        </tr>
+        <tr>
+          <td>SWP</td>
+          <td>Swap data</td>
+          <td>
+            SWP R,Rc<br>
+            SWP R,PTR<br>
             SWP R,*PTR<br>
             SWP R,OFS<br>
             SWP R,IX<br>
             SWP R,IS<br>
             SWP R,CTR<br>
             SWP R,CS<br>
-            MOV R,*SP[U8]<br>
-            MOV *SP[U8],R<br>
+            SWP R,ST<br>
+            SWP R,SB<br>
             SWP R,*SP[U8]<br>
-            MOV R,O<br>
             SWP R,M
           </td>
           <td>
             --ZN---- --------<br>
-            SWP does not affect any flags
           </td>
         </tr>
         <tr>
@@ -1080,11 +1143,9 @@
           <td>PSH</td>
           <td>Push on the stack</td>
           <td>
-            If SP - register size &lt; SB execute *FFFFFFF8 interrupt with R0 = 0, R1 = 1 (SP overflow)<br>
+            If SP - register size &lt; 0 execute *FFFFFFFC interrupt with R0 = 1 (stack overflow)<br>
             *SP = register<br>
             SP = SP - register size<br>
-            Up to implementation whether Bytes are written big or litle endian<br>
-            Only guarantee is that a push followed by a pull of the same register works as expected<br>
             <br>
             PSH R0<br>
             PSH R1<br>
@@ -1110,7 +1171,7 @@
           <td>PUL</td>
           <td>Pull off the stack</td>
           <td>
-            If SP + register size &gt; SL execute *FFFFFFF8 interrupt with R0 = 0, R1 = 2 (SP underflow)<br>
+            If SP + register size &gt; FFFFFFFF execute *FFFFFFFC interrupt with R0 = 2 (stack underflow)<br>
             SP = SP + register size<br>
             register = *SP<br>
             <br>
@@ -1141,7 +1202,7 @@
           <td>SSP</td>
           <td>Subtract from stack pointer</td>
           <td>
-            If SP - U8 &lt; SB execute *FFFFFFF8 interrupt with R0 = 0, R1 = 1 (SP overflow)<br>
+            If SP - U8 &lt; 0 execute *FFFFFFFC interrupt with R0 = 1 (stack overflow)<br>
             SP = SP - U8
           </td>
           <td>--------- --------</td>
@@ -1150,7 +1211,7 @@
           <td colspan="4">Status (<span class="count-ins0-status"></span> opcodes)</td>
         </tr>
         <tr>
-          <td>CLC (CLNAN)</td>
+          <td>CLC</td>
           <td>Clear carry flag (Clear NaN)</td>
           <td>Set C = 0</td>
           <td>C------- --------</td>
@@ -1163,61 +1224,61 @@
         </tr>
         <tr>
           <td>SEA0</td>
-          <td>Set address mode 0</td>
+          <td>Select address mode 0</td>
           <td>Set AAA = 0</td>
           <td>----000- --------</td>
         </tr>
         <tr>
           <td>SEA1</td>
-          <td>Set address mode 1</td>
+          <td>Select address mode 1</td>
           <td>Set AAA = 1</td>
           <td>----001- --------</td>
         </tr>
         <tr>
           <td>SEA2</td>
-          <td>Set address mode 2</td>
+          <td>Select address mode 2</td>
           <td>Set AAA = 2</td>
           <td>----010- --------</td>
         </tr>
         <tr>
           <td>SEA3</td>
-          <td>Set address mode 3</td>
+          <td>Select address mode 3</td>
           <td>Set AAA = 3</td>
           <td>----011- --------</td>
         </tr>
         <tr>
           <td>SEA4</td>
-          <td>Set address mode 4</td>
+          <td>Select address mode 4</td>
           <td>Set AAA = 4</td>
           <td>----100- --------</td>
         </tr>
         <tr>
           <td>SEA5</td>
-          <td>Set address mode 5</td>
+          <td>Select address mode 5</td>
           <td>Set AAA = 5</td>
           <td>----101- --------</td>
         </tr>
         <tr>
           <td>SEA6</td>
-          <td>Set address mode 6</td>
+          <td>Select address mode 6</td>
           <td>Set AAA = 6</td>
           <td>----110- --------</td>
         </tr>
         <tr>
           <td>SEA7</td>
-          <td>Set address mode 7</td>
+          <td>Select address mode 7</td>
           <td>Set AAA = 7</td>
           <td>----111- --------</td>
         </tr>
         <tr>
-          <td>SEC (SENAN)</td>
+          <td>SEC</td>
           <td>Set carry flag (Set NaN)</td>
           <td>Set C = 1</td>
           <td>C------- --------</td>
         </tr>
         <tr>
           <td>SEI</td>
-          <td>Set hardware interrupt disable flag</td>
+          <td>Set interrupt disable flag</td>
           <td>Set I = 1</td>
           <td>-------I --------</td>
         </tr>
@@ -1247,25 +1308,25 @@
         </tr>
         <tr>
           <td>SEO0</td>
-          <td>Select operand size 0</td>
+          <td>Select operand size 0 (8 bits)</td>
           <td>Set OO = 0</td>
           <td>-------- ----00--</td>
         </tr>
         <tr>
           <td>SEO1</td>
-          <td>Select operand size 1</td>
+          <td>Select operand size 1 (16 bits)</td>
           <td>Set OO = 1</td>
           <td>-------- ----01--</td>
         </tr>
         <tr>
           <td>SEO2</td>
-          <td>Select operand size 2</td>
+          <td>Select operand size 2 (32 bits)</td>
           <td>Set OO = 2</td>
           <td>-------- ----10--</td>
         </tr>
         <tr>
           <td>SEO3</td>
-          <td>Select operand size 3</td>
+          <td>Select operand size 3 (64 bits)</td>
           <td>Set OO = 3</td>
           <td>-------- ----11--</td>
         </tr>
@@ -1441,88 +1502,30 @@
       while a 16-bit operand allows a jump in the range of [-32765, 32770].
     </p>
     <p>
-      JMA/JSA Allow jumps with an absolute 32-bit usigned address to any code in the system, to allow for kernel jump tables.
+      JMA/JSA Allow jumps with an absolute 32-bit usigned address to any code in the system.
     </p>
+    
     <h2>Interrupts</h2>
     <ul>
       <li>Interrupts can only occur by hardware, there is no instruction to invoke an interrupt.</li>
-      <li>The single non-maskable interrupt cannot be prevented from executing by the interrupt Disable flag.</li>
-      <li>Maskable interrupts can only occur when the Interrupt Disabled flag is clear. Any routine should set this flag
-        at the start of a critical section, and clear it at the end, whether the routine is a main program or an
-        interrupt routine.
+      <li>Interrupts can only occur when the Interrupt Disabled flag is clear. Any routine should set this flag
+        at the start of a critical section, and clear it at the end.
       </li>
-      <li>An interrupt can only occur after the current instruction has completed, and pushes all registers and the address of the
-        following instruction.
+      <li>Interrupts save all registers and must end with an RTI instruction to pull all registers and resume
+        execution at the interrupted code.
       </li>
-      <li>Each interrupt pointer address represents a unique kind of interrupt. Once an interrupt of a given kind is
-        generated, no more interrupts of that kind can be generated until the interrupt routine has completed with an
-        RTI.
-      </li>
-      <li>If multiple interrupts occur during the same instruction execution, one interrupt is chosen by priority.</li>
-      <li>An interrupt routine can be interrupted during a non-critical section by another kind of interrupt of higher
-        priority, but it cannot be interrupted by another kind of interrupt of lower priority.
-      </li>
-      <li>Interrupts must end with an RTI instruction to signal that the interrupt has completed handling. RTI pulls the
-        all registers and PC in the opposite order pushed when an interrupt occurs.
-      </li>
-      <li>Interrupts are invoked by using a memory address to contain the pointer</li>
-      <li>FFFFFFFC = startup pointer</li>
-      <li>FFFFFFF8 = instruction error interrupt pointer</li>
-      </li>
-      <li>The following implications occur as a result of the above statements:
-        <ol>
-          <li>Interrupt disable flag handling
-            <ul>
-              <li>Interrupts necessarily push ST with interrupt disable clear</li>
-              <li>Interrupts necessarily restore ST with interrupt disable flag clear</li>
-              <li>Routines do not have to explicitly clear interrupt disable flag before returning</li>
-            </ul>
-          </li>
-          <li>Stack handling</li>
-            <ul>
-              <li>Clearing interrupt disable immediately before returning provides an opportunity to interrupt the
-                current routine just before returning and executing another interrupt, increasing the size of the
-                stack.
-              </li>
-              <li>Purposely not clearing the interrupt disable flag in the above situation prevents another interrupt
-                from executing until after the registers are pulled from the stack for the current one, reducing stack
-                size.
-              </li>
-            </ul>
-          </li>
-          <li>Main execution and multiple interrupts
-            <ul>
-              <li>If a series of sequential interrupts occur where the routines clear the interrupt disable before
-                returning, the interrupts are nested
-              </li>
-              <li>If a series of sequential interrupts occur where the routines do not clear the interrupt disable flag
-                before returning, the interrupts are chained - as soon as one finishes the next begins.
-              </li>
-              <li>In both cases, the routine being interrupted cannot proceed to execute a single instruction until all
-                other interrupts have been handled - this is true whether the routine being interrupted is itself an
-                interrupt routine or a main program.
-              </li>
-              <li>If one or more lower priority interrupts occur during the execution of a higher priority interrupt,
-                none of the lower priority interrupts occur until the higher priority routine has completed with an RTI.
-              </li> 
-            </ul>
-          </li>
-          <li>Time critical interrupts
-            <ul>
-              <li>A time critical interrupt can begin by setting the interrupt Disable flag, and end with an RTI where
-                there is no explicit clearing of the interrupt Disable flag.</li>
-              <li>Since the first instruction sets interrupt Disable, and the entire routine is a critical section,
-                there is no opportunity for another interrupt to occur, even one of higher priority.</li>
-            </ul>
-          </li>
-        </ol>
+      <li>Interrupts need a defined memory address to contain the pointer to the interrupt routine.
+        An optional interrupt begins with the pointer set to 0, a required interrupt will
+        initialize the pointer to a default routine. 
       </li>
     </ul>
     
     <h2>General Information</h2>
     <ol>
       <li>The processor is little endian - the highest byte is stored first, the lowest byte last</li>
-      <li>The stack is 64k in size, the location is an implementation detail.</li>
+      <li>The stack is 64k in size, the default range = FFFE0000 thru FFFEFFFF</li>
+      <li>OS routines should be located in FFFF0000 thru FFFFFFFB</li>
+      <li>Reset/error interrupt pointer is FFFFFFFC thru FFFFFFFF</li>
       <li>Since there is no software interrupt instruction, use JSA to call an address containing a JMA instruction that
         calls the actual routine at an OS defined address. Such a jump table provides well-known addresses for users to
         call OS routines, while allowing the OS routines to be moved around as they are updated.
@@ -1531,15 +1534,19 @@
     
     <h2>Startup information</h2>
     <ul>
-      <li>Registers have undefined values on initial reset. They are undefined simply because the
-        user can cause a reset at anytime after startup, in which case the registers will hold whatever values the
-        current routine being interrupted happens to be using.
+      <li>A reset executes *FFFFFFFC interrupt with R0 = 0.</li>
+      <li>All other registers have undefined values on reset. A reset could occur at anytime, in which case the registers will
+        still hold their current values after the reset.
       </li>
-      <li>Hardware errors can be handled by simply using JMA with the startup pointer.</li>
+      <li>This same interrupt has other values for R0 for error conditions (see Instructions)</li>
     </ul>
     
     <h2>Opcodes</h2>
-    
+    <ul>
+      <li>All unused opcodes in columns 0 thru B are reserved for future use.</li>
+      <li>All opcodes in columns C thru F are available for implementation use.</li>
+      <li>Opcodes cannot be user defined.</li>
+    </ul>
     <p>Legend</p>
     <p>Note: roll mouse over the colours in the legend to highlight the instructions in the table.</p>
     <table id="legend0">
@@ -1625,12 +1632,12 @@
           <td class="ins0-binary">AND R,*PTR</td>
           <td class="ins0-binary">CMP R,Rc</td>
           <td class="ins0-binary">CMP R,*PTR</td>
+          <td class="ins0-binary">DIV R,Rc</td>
+          <td class="ins0-binary">DIV R,*PTR</td>
+          <td class="ins0-binary">MUL R,Rc</td>
+          <td class="ins0-binary">MUL R,*PTR</td>
           <td class="ins0-binary">OR R,Rc</td>
           <td class="ins0-binary">OR R,*PTR</td>
-          <td class="ins0-binary">SHA R,Rc</td>
-          <td class="ins0-binary">SHA R,U8</td>
-          <td class="ins0-binary">SHL R,Rc</td>
-          <td class="ins0-binary">SHL R,U8</td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
@@ -1639,18 +1646,18 @@
         </tr>
         <tr>
           <th>1</th>
+          <td class="ins0-binary">SHA R,Rc</td>
+          <td class="ins0-binary">SHA R,U8</td>
+          <td class="ins0-binary">SHL R,Rc</td>
+          <td class="ins0-binary">SHL R,U8</td>
           <td class="ins0-binary">SHR R,Rc</td>
           <td class="ins0-binary">SHR R,U8</td>
           <td class="ins0-binary">SUB R,Rc</td>
           <td class="ins0-binary">SUB R,*PTR</td>
-          <td class="ins0-binary">XOR R,Rc</td>
-          <td class="ins0-binary">XOR R,*PTR</td>
-          <td class="ins0-branch">BCC S8</td>
-          <td class="ins0-branch">BCS S8</td>
-          <td class="ins0-branch">BEQ S8</td>
-          <td class="ins0-branch">BMI S8</td>
-          <td class="ins0-branch">BNE S8</td>
-          <td class="ins0-branch">BPL S8</td>
+          <td class="ins0-binary">TCLR R,Rc</td>
+          <td class="ins0-binary">TCLR R,*PTR</td>
+          <td class="ins0-binary">TSET R,Rc</td>
+          <td class="ins0-binary">TSET R,*PTR</td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
@@ -1659,10 +1666,25 @@
         </tr>
         <tr>
           <th>2</th>
+          <td class="ins0-binary">XOR R,Rc</td>
+          <td class="ins0-binary">XOR R,*PTR</td>
+          <td class="ins0-branch">BCC S8</td>
+          <td class="ins0-branch">BCS S8</td>
+          <td class="ins0-branch">BEQ S8</td>
+          <td class="ins0-branch">BMI S8</td>
+          <td class="ins0-branch">BNE S8</td>
+          <td class="ins0-branch">BPL S8</td>
           <td class="ins0-branch">BVC S8</td>
           <td class="ins0-branch">BVS S8</td>
           <td class="ins0-branch">JMA R</td>
           <td class="ins0-branch">JMA U32</td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+        </tr>
+        <tr>
+          <th>3</th>
           <td class="ins0-branch">JMP R</td>
           <td class="ins0-branch">JMP S16</td>
           <td class="ins0-branch">JSA R</td>
@@ -1671,17 +1693,17 @@
           <td class="ins0-branch">JSR S16</td>
           <td class="ins0-branch">RTI</td>
           <td class="ins0-branch">RTS</td>
+          <td class="ins0-branch">RTS U8</td>
+          <td class="ins0-float">F2SF</td>
+          <td class="ins0-float">FABS</td>
+          <td class="ins0-float">FACS</td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
         </tr>
         <tr>
-          <th>3</th>
-          <td class="ins0-branch">RTS U8</td>
-          <td class="ins0-float">F2SF</td>
-          <td class="ins0-float">FABS</td>
-          <td class="ins0-float">FACS</td>
+          <th>4</th>
           <td class="ins0-float">FASN</td>
           <td class="ins0-float">FATN</td>
           <td class="ins0-float">FCEL</td>
@@ -1690,25 +1712,10 @@
           <td class="ins0-float">FF2U</td>
           <td class="ins0-float">FFLR</td>
           <td class="ins0-float">FLOG</td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-        </tr>
-        <tr>
-          <th>4</th>
           <td class="ins0-float">FNLG</td>
           <td class="ins0-float">FPOW</td>
           <td class="ins0-float">FSIN</td>
           <td class="ins0-float">FSQR</td>
-          <td class="ins0-float">FTAN</td>
-          <td class="ins0-float">FU2F</td>
-          <td class="ins0-move">SWP R,Rc</td>
-          <td class="ins0-move">MOV R,PTR</td>
-          <td class="ins0-move">MOV PTR,R</td>
-          <td class="ins0-move">SWP R,PTR</td>
-          <td class="ins0-move">MOV R,*PTR</td>
-          <td class="ins0-move">MOV *PTR,R</td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
@@ -1716,18 +1723,18 @@
         </tr>
         <tr>
           <th>5</th>
-          <td class="ins0-move">SWP R,*PTR</td>
-          <td class="ins0-move">SWP R,OFS</td>
-          <td class="ins0-move">SWP R,IX</td>
-          <td class="ins0-move">SWP R,IS</td>
-          <td class="ins0-move">SWP R,CTR</td>
-          <td class="ins0-move">SWP R,CS</td>
+          <td class="ins0-float">FTAN</td>
+          <td class="ins0-float">FU2F</td>
+          <td class="ins0-move">MOV R,PTR</td>
+          <td class="ins0-move">MOV PTR,R</td>
+          <td class="ins0-move">MOV R,*PTR</td>
+          <td class="ins0-move">MOV *PTR,R</td>
           <td class="ins0-move">MOV R,*SP[U8]</td>
           <td class="ins0-move">MOV *SP[U8],R</td>
-          <td class="ins0-move">SWP R,*SP[U8]</td>
           <td class="ins0-move">MOV R,O</td>
-          <td class="ins0-move">SWP R,M</td>
-          <td class="ins0-other">NOP</td>
+          <td class="ins0-move">SWP R,Rc</td>
+          <td class="ins0-move">SWP R,PTR</td>
+          <td class="ins0-move">SWP R,*PTR</td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
@@ -1735,8 +1742,25 @@
         </tr>
         <tr>
           <th>6</th>
+          <td class="ins0-move">SWP R,OFS</td>
+          <td class="ins0-move">SWP R,IX</td>
+          <td class="ins0-move">SWP R,IS</td>
+          <td class="ins0-move">SWP R,CTR</td>
+          <td class="ins0-move">SWP R,CS</td>
+          <td class="ins0-move">SWP R,ST</td>
+          <td class="ins0-move">SWP R,SB</td>
+          <td class="ins0-move">SWP R,*SP[U8]</td>
+          <td class="ins0-move">SWP R,M</td>
+          <td class="ins0-other">NOP</td>
           <td class="ins0-stack">PSH R0</td>
           <td class="ins0-stack">PSH R1</td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+        </tr>
+        <tr>
+          <th>7</th>
           <td class="ins0-stack">PSH R2</td>
           <td class="ins0-stack">PSH R3</td>
           <td class="ins0-stack">PSH PTR0</td>
@@ -1747,16 +1771,15 @@
           <td class="ins0-stack">PSH OFS1</td>
           <td class="ins0-stack">PSH IX1</td>
           <td class="ins0-stack">PSH IS1</td>
-
+          <td class="ins0-stack">PSH CTR0</td>
+          <td class="ins0-stack">PSH CS0</td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
         </tr>
         <tr>
-          <th>7</th>
-          <td class="ins0-stack">PSH CTR0</td>
-          <td class="ins0-stack">PSH CS0</td>
+          <th>8</th>
           <td class="ins0-stack">PSH CTR1</td>
           <td class="ins0-stack">PSH CS1</td>
           <td class="ins0-stack">PSH ST</td>
@@ -1767,16 +1790,15 @@
           <td class="ins0-stack">PUL PTR0</td>
           <td class="ins0-stack">PUL OFS0</td>
           <td class="ins0-stack">PUL IX0</td>
-
+          <td class="ins0-stack">PUL IS0</td>
+          <td class="ins0-stack">PUL PTR1</td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
         </tr>
         <tr>
-          <th>8</th>
-          <td class="ins0-stack">PUL IS0</td>
-          <td class="ins0-stack">PUL PTR1</td>
+          <th>9</th>
           <td class="ins0-stack">PUL OFS1</td>
           <td class="ins0-stack">PUL IX1</td>
           <td class="ins0-stack">PUL IS1</td>
@@ -1787,15 +1809,15 @@
           <td class="ins0-stack">PUL ST</td>
           <td class="ins0-stack">SSP U8</td>
           <td class="ins0-status">CLC</td>
+          <td class="ins0-status">CLI</td>
+          <td class="ins0-status">SEA0</td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
         </tr>
         <tr>
-          <th>9</th>
-          <td class="ins0-status">CLI</td>
-          <td class="ins0-status">SEA0</td>
+          <th>A</th>
           <td class="ins0-status">SEA1</td>
           <td class="ins0-status">SEA2</td>
           <td class="ins0-status">SEA3</td>
@@ -1806,15 +1828,15 @@
           <td class="ins0-status">SEC</td>
           <td class="ins0-status">SEI</td>
           <td class="ins0-status">SEM0</td>
+          <td class="ins0-status">SEM1</td>
+          <td class="ins0-status">SEM2</td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
         </tr>
         <tr>
-          <th>A</th>
-          <td class="ins0-status">SEM1</td>
-          <td class="ins0-status">SEM2</td>
+          <th>B</th>
           <td class="ins0-status">SEM3</td>
           <td class="ins0-status">SEO0</td>
           <td class="ins0-status">SEO1</td>
@@ -1825,15 +1847,15 @@
           <td class="ins0-status">SER0</td>
           <td class="ins0-status">SER1</td>
           <td class="ins0-status">SER2</td>
+          <td class="ins0-status">SER3</td>
+          <td class="ins0-status">SET0</td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
         </tr>
         <tr>
-          <th>B</th>
-          <td class="ins0-status">SER3</td>
-          <td class="ins0-status">SET0</td>
+          <th>C</th>
           <td class="ins0-status">SET1</td>
           <td class="ins0-unary">DEC R</td>
           <td class="ins0-unary">DEC *PTR</td>
@@ -1844,15 +1866,15 @@
           <td class="ins0-unary">NG1 R</td>
           <td class="ins0-unary">NG1 *PTR</td>
           <td class="ins0-unary">NG1 IS</td>
+          <td class="ins0-unary">NOT R</td>
+          <td class="ins0-unary">NOT *PTR</td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
         </tr>
         <tr>
-          <th>C</th>
-          <td class="ins0-unary">NOT R</td>
-          <td class="ins0-unary">NOT *PTR</td>
+          <th>D</th>
           <td class="ins0-unary">NXT IX</td>
           <td class="ins0-unary">NXT CTR</td>
           <td class="ins0-unary">ONE R</td>
@@ -1863,23 +1885,6 @@
           <td class="ins0-unary">SHRC R</td>
           <td class="ins0-unary">ZRO R</td>
           <td class="ins0-unary">ZRO IX</td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-        </tr>
-        <tr>
-          <th>D</th>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>

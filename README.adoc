@@ -71,11 +71,11 @@ A microprocessor that is intended only for a virtual environment.
 ... 64 bits: scaling factor = 10^-8, range = +/-99,999,999,999.99999999
 .. Existing ADC, DIV, MUL, SBC, CMP become fixed point instructions
 ... VZN flags have same meaning as integer instructions
-... Carry Flag = 1 has no meaning in ADC, SBC, and MUL, indicates modulo for DIV
+... Carry Flag = 1 after ADC, SBC, and MUL indicates more bits are needed
 . Floating point instructions
 .. When operand size is 8 or 16 bits, use Half Precision, 32 bits = Single Precision, 64 bits = Double Precision
 .. Existing ADC, DIV, MUL, SBC, CMP become FP instructions
-... Carry Flag = 1 has no meaning in ADC, SBC, and MUL, indicates modulo for DIV
+... Carry Flag = 1 after ADC, SBC, and MUL indicates more bits are needed
 .. Unary
 ... FS2F - signed integer to floating point: W(int -> float) 
 ... FF2S - floating point to signed integer: W(float -> int)
