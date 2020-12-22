@@ -68,14 +68,14 @@ const (
 
 // Address modes
 const (
-	Ptr uint8 = iota
-	PtrOfs
-	PtrIx
-	PtrIxOfs
-	PtrPtr
-	PtrPtrOfs
-	PtrPtrIx
-	PtrPtrIxOfs
+	Ptr         uint8 = iota // 000 1 = 1
+	PtrOfs                   // 001 1 = 3
+	PtrIx                    // 010 1 = 5
+	PtrIxOfs                 // 011 1 = 7
+	PtrPtr                   // 100 1 = 9
+	PtrPtrOfs                // 101 1 = B
+	PtrPtrIx                 // 110 1 = D
+	PtrPtrIxOfs              // 111 1 = F
 )
 
 // STAddressModeErr ifaAddress mode is invalid
@@ -83,10 +83,10 @@ const STAddressModeErr = "Address mode must be <= 7"
 
 // Register selection
 const (
-	RegisterR0 uint8 = iota
-	RegisterR1
-	RegisterR2
-	RegisterR3
+	RegisterR0 uint8 = iota // 00 11 = 3
+	RegisterR1              // 01 11 = 7
+	RegisterR2              // 10 11 = B
+	RegisterR3              // 11 11 = F
 )
 
 // STRegisterErr if register is invalid
@@ -94,10 +94,10 @@ const STRegisterErr = "Register must be <= 3"
 
 // Operand sizes
 const (
-	Operand8 uint8 = iota
-	Operand16
-	Operand32
-	Operand64
+	Operand8  uint8 = iota // 00 11 = 3
+	Operand16              // 01 11 = 7
+	Operand32              // 10 11 = B
+	Operand64              // 11 11 = F
 )
 
 // STOperandModeErr if operand mode is invalid
@@ -105,10 +105,10 @@ const STOperandModeErr = "Operand mode must be <= 3"
 
 // Math modes
 const (
-	MathInteger uint8 = iota
-	MathFractional
-	MathFixed
-	MathFloat
+	MathInteger    uint8 = iota // 11 00 = C
+	MathFractional              // 11 01 = D
+	MathFixed                   // 11 10 = E
+	MathFloat                   // 11 11 = F
 )
 
 // STMathModeErr if math mode is invalid
@@ -127,13 +127,13 @@ func (st StatusRegister) Carry() bool {
 }
 
 // SetCarry sets the carry flag
-func (st StatusRegister) SetCarry() {
-	st |= StatusRegister(STCarry)
+func (st *StatusRegister) SetCarry() {
+	*st |= StatusRegister(STCarry)
 }
 
 // ClearCarry clears the carry flag
-func (st StatusRegister) ClearCarry() {
-	st = StatusRegister((uint32(st) | STCarry) - STCarry)
+func (st *StatusRegister) ClearCarry() {
+	*st = StatusRegister((uint32(*st) | STCarry) - STCarry)
 }
 
 // Overflow returns true if the overflow flag is set
@@ -142,13 +142,28 @@ func (st StatusRegister) Overflow() bool {
 }
 
 // SetOverflow sets the overflow flag
-func (st StatusRegister) SetOverflow() {
-	st |= StatusRegister(STOverflow)
+func (st *StatusRegister) SetOverflow() {
+	*st |= StatusRegister(STOverflow)
 }
 
 // ClearOverflow clears the overflow flag
-func (st StatusRegister) ClearOverflow() {
-	st = StatusRegister((uint32(st) | STOverflow) - STOverflow)
+func (st *StatusRegister) ClearOverflow() {
+	*st = StatusRegister((uint32(*st) | STOverflow) - STOverflow)
+}
+
+// Zero returns true if the overflow flag is set
+func (st StatusRegister) Zero() bool {
+	return (uint32(st) & STZero) == STZero
+}
+
+// SetZero sets the overflow flag
+func (st *StatusRegister) SetZero() {
+	*st |= StatusRegister(STZero)
+}
+
+// ClearZero clears the overflow flag
+func (st *StatusRegister) ClearZero() {
+	*st = StatusRegister((uint32(*st) | STZero) - STZero)
 }
 
 // Negative returns true if the negative flag is set
@@ -157,13 +172,13 @@ func (st StatusRegister) Negative() bool {
 }
 
 // SetNegative sets the negative flag
-func (st StatusRegister) SetNegative() {
-	st |= StatusRegister(STNegative)
+func (st *StatusRegister) SetNegative() {
+	*st |= StatusRegister(STNegative)
 }
 
 // ClearNegative clears the negative flag
-func (st StatusRegister) ClearNegative() {
-	st = StatusRegister((uint32(st) | STNegative) - STNegative)
+func (st *StatusRegister) ClearNegative() {
+	*st = StatusRegister((uint32(*st) | STNegative) - STNegative)
 }
 
 // AddressMode returns the address mode
@@ -172,10 +187,10 @@ func (st StatusRegister) AddressMode() uint8 {
 }
 
 // SetAddressMode sets the address mode
-func (st StatusRegister) SetAddressMode(am uint8) {
+func (st *StatusRegister) SetAddressMode(am uint8) {
 	gofuncs.PanicBM(am <= PtrPtrIxOfs, STAddressModeErr)
 
-	st = StatusRegister(((uint32(st) | STAddress) - STAddress) + (uint32(am) << STAddressShift))
+	*st = StatusRegister(((uint32(*st) | STAddress) - STAddress) + (uint32(am) << STAddressShift))
 }
 
 // InterruptDisable returns true if the interrupt disable flag is set
@@ -184,13 +199,13 @@ func (st StatusRegister) InterruptDisable() bool {
 }
 
 // SetInterruptDisable sets the interrupt disable flag
-func (st StatusRegister) SetInterruptDisable() {
-	st |= StatusRegister(STInterruptDisable)
+func (st *StatusRegister) SetInterruptDisable() {
+	*st |= StatusRegister(STInterruptDisable)
 }
 
 // ClearInterruptDisable clears the interrupt disable flag
-func (st StatusRegister) ClearInterruptDisable() {
-	st = StatusRegister((uint32(st) | STInterruptDisable) - STInterruptDisable)
+func (st *StatusRegister) ClearInterruptDisable() {
+	*st = StatusRegister((uint32(*st) | STInterruptDisable) - STInterruptDisable)
 }
 
 // RegisterMode returns the register mode
@@ -199,10 +214,10 @@ func (st StatusRegister) RegisterMode() uint8 {
 }
 
 // SetRegisterMode sets the register mode
-func (st StatusRegister) SetRegisterMode(rm uint8) {
+func (st *StatusRegister) SetRegisterMode(rm uint8) {
 	gofuncs.PanicBM(rm <= Operand64, STRegisterErr)
 
-	st = StatusRegister(((uint32(st) | STRegister) - STRegister) + (uint32(rm) << STRegisterShift))
+	*st = StatusRegister(((uint32(*st) | STRegister) - STRegister) + (uint32(rm) << STRegisterShift))
 }
 
 // PointerRegisterSet0 returns true if pointer register set 0 is selected
@@ -216,13 +231,13 @@ func (st StatusRegister) PointerRegisterSet1() bool {
 }
 
 // SetPointerRegisterSet0 selects pointer register set 0
-func (st StatusRegister) SetPointerRegisterSet0() {
-	st = StatusRegister((uint32(st) | STPointerRegisterSet) - STPointerRegisterSet)
+func (st *StatusRegister) SetPointerRegisterSet0() {
+	*st = StatusRegister((uint32(*st) | STPointerRegisterSet) - STPointerRegisterSet)
 }
 
 // SetPointerRegisterSet1 selects pointer register set 1
-func (st StatusRegister) SetPointerRegisterSet1() {
-	st |= StatusRegister(STPointerRegisterSet)
+func (st *StatusRegister) SetPointerRegisterSet1() {
+	*st |= StatusRegister(STPointerRegisterSet)
 }
 
 // CounterRegisterSet0 returns true if counter register set 0 is selected
@@ -236,13 +251,13 @@ func (st StatusRegister) CounterRegisterSet1() bool {
 }
 
 // SetCounterRegisterSet0 selects counter register set 0
-func (st StatusRegister) SetCounterRegisterSet0() {
-	st = StatusRegister((uint32(st) | STCounterRegisterSet) - STCounterRegisterSet)
+func (st *StatusRegister) SetCounterRegisterSet0() {
+	*st = StatusRegister((uint32(*st) | STCounterRegisterSet) - STCounterRegisterSet)
 }
 
 // SetCounterRegisterSet1 selects counter register set 1
-func (st StatusRegister) SetCounterRegisterSet1() {
-	st |= StatusRegister(STCounterRegisterSet)
+func (st *StatusRegister) SetCounterRegisterSet1() {
+	*st |= StatusRegister(STCounterRegisterSet)
 }
 
 // OperandSize returns the operand size
@@ -251,10 +266,10 @@ func (st StatusRegister) OperandSize() uint8 {
 }
 
 // SetOperandSize sets the operand size
-func (st StatusRegister) SetOperandSize(om uint8) {
+func (st *StatusRegister) SetOperandSize(om uint8) {
 	gofuncs.PanicBM(om <= Operand64, STOperandModeErr)
 
-	st = StatusRegister(((uint32(st) | STOperand) - STOperand) + (uint32(om) << STOperandShift))
+	*st = StatusRegister(((uint32(*st) | STOperand) - STOperand) + (uint32(om) << STOperandShift))
 }
 
 // MathMode returns the math mode
@@ -263,10 +278,10 @@ func (st StatusRegister) MathMode() uint8 {
 }
 
 // SetMathMode sets the math mode
-func (st StatusRegister) SetMathMode(mm uint8) {
+func (st *StatusRegister) SetMathMode(mm uint8) {
 	gofuncs.PanicBM(mm <= MathFloat, STMathModeErr)
 
-	st = StatusRegister(((uint32(st) | STMath) - STMath) + (uint32(mm) << STMathShift))
+	*st = StatusRegister(((uint32(*st) | STMath) - STMath) + (uint32(mm) << STMathShift))
 }
 
 // System returns the system defined ST bits
@@ -275,8 +290,8 @@ func (st StatusRegister) System() uint8 {
 }
 
 // SetSystem sets the system defined ST bits
-func (st StatusRegister) SetSystem(sb uint8) {
-	st = StatusRegister(((uint32(st) | STSystem) - STSystem) + (uint32(sb) << STSystemShift))
+func (st *StatusRegister) SetSystem(sb uint8) {
+	*st = StatusRegister(((uint32(*st) | STSystem) - STSystem) + (uint32(sb) << STSystemShift))
 }
 
 // User returns the user defined ST bits
@@ -285,8 +300,8 @@ func (st StatusRegister) User() uint8 {
 }
 
 // SetUser sets the user defined ST bits
-func (st StatusRegister) SetUser(sb uint8) {
-	st = StatusRegister(((uint32(st) | STUser) - STUser) + uint32(sb))
+func (st *StatusRegister) SetUser(sb uint8) {
+	*st = StatusRegister(((uint32(*st) | STUser) - STUser) + uint32(sb))
 }
 
 // Registers contains the processor registers
