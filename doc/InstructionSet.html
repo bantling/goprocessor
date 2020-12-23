@@ -547,7 +547,7 @@
         <tr>
           <td>AAA</td>
           <td>
-            Address Mode (PTR = 100, OFS = 25, IX = 400, address 100 has pointer to address 200)<br>
+            Selected Address Mode (PTR = 100, OFS = 25, IX = 400, address 100 has pointer to address 200)<br>
             000 = *PTR = PTR = 100<br>
             001 = *(PTR) = PTR + OFS = 125<br>
             010 = *[PTR] = PTR + IX = 500<br>
@@ -565,25 +565,25 @@
         <tr>
           <td>RR</td>
           <td>
-            Select a general purpose register
+            Selected general purpose register
           </td>
         </tr>
         <tr>
           <td>P</td>
           <td>
-            Select a pointer register set (PTR, OFS, IX, IS)
+            Selected pointer register set (PTR, OFS, IX, IS)
           </td>
         </tr>
         <tr>
           <td>T</td>
           <td>
-            Select a counter register set (CTR, CS)
+            Selected counter register set (CTR, CS)
           </td>
         </tr>
         <tr>
           <td>OO</td>
           <td>
-            Operand Size<br>
+            Selected Operand Size<br>
             00: 8 bits<br>
             01: 16 bits<br>
             10: 32 bits<br>
@@ -593,7 +593,7 @@
         <tr>
           <td>MM</td>
           <td>
-            Math Mode<br>
+            Selected Math Mode<br>
             00 = Integer<br>
             01 = Fractional<br>
             10 = Fixed Point<br>
@@ -1218,7 +1218,7 @@
         </tr>
         <tr>
           <td>CLI</td>
-          <td>Clear hardware interrupt disable flag</td>
+          <td>Clear interrupt disable flag</td>
           <td>Set I = 0</td>
           <td>-------I --------</td>
         </tr>

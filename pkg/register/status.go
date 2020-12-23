@@ -1,16 +1,10 @@
-package proc
+package register
 
 import (
 	"github.com/bantling/gofuncs"
 )
 
 const (
-	// DefaultSB is the default stack base
-	DefaultSB uint32 = 0xFFFE0000
-
-	// DefaultSP is the default stack pointer
-	DefaultSP uint16 = 0xFFFF
-
 	// STCarrySet is ST filter for setting carry flag
 	STCarrySet uint32 = 0x80000000
 
@@ -153,10 +147,10 @@ const (
 // STMathModeErr if math mode is invalid
 const STMathModeErr = "Math mode must be <= 3"
 
-// StatusRegister defines the status register
-// CVZNAAAI RRPTOOMM SSSSSSSS UUUUUUUU
+// StatusRegister defines the status register.
+// CVZNAAAI RRPTOOMM SSSSSSSS UUUUUUUU.
 // Carry, oVerflow, Zero, Negative, Address mode, Interrupt Disable,
-// Register, Pointer register, counTer register, Operand size, Math mode,
+// Register, Pointer register set, counTer register set, Operand size, Math mode.
 // 8 bits reserved for system use, and 8 bits reserved for users.
 type StatusRegister uint32
 
@@ -225,8 +219,8 @@ func (st StatusRegister) AddressMode() uint8 {
 	return uint8((uint32(st) & STAddressRead) >> STAddressShift)
 }
 
-// SetAddressMode sets the address mode
-func (st *StatusRegister) SetAddressMode(am uint8) {
+// SelectAddressMode selects an address mode
+func (st *StatusRegister) SelectAddressMode(am uint8) {
 	gofuncs.PanicBM(am <= PtrPtrIxOfs, STAddressModeErr)
 
 	*st = StatusRegister((uint32(*st) & STAddressSet) + (uint32(am) << STAddressShift))
@@ -247,13 +241,13 @@ func (st *StatusRegister) ClearInterruptDisable() {
 	*st = StatusRegister(STInterruptDisableClear)
 }
 
-// RegisterMode returns the register mode
-func (st StatusRegister) RegisterMode() uint8 {
+// Register returns the selected register
+func (st StatusRegister) Register() uint8 {
 	return uint8((uint32(st) & STRegisterRead) >> STRegisterShift)
 }
 
-// SetRegisterMode sets the register mode
-func (st *StatusRegister) SetRegisterMode(rm uint8) {
+// SelectRegister selects a register
+func (st *StatusRegister) SelectRegister(rm uint8) {
 	gofuncs.PanicBM(rm <= Operand64, STRegisterErr)
 
 	*st = StatusRegister((uint32(*st) & STRegisterSet) + (uint32(rm) << STRegisterShift))
@@ -264,18 +258,13 @@ func (st StatusRegister) PointerRegisterSet0() bool {
 	return (uint32(st) & STPointerRegisterSet) == 0
 }
 
-// PointerRegisterSet1 returns true if pointer register set 1 is selected
-func (st StatusRegister) PointerRegisterSet1() bool {
-	return (uint32(st) & STPointerRegisterSet) == STPointerRegisterSet
-}
-
-// SetPointerRegisterSet0 selects pointer register set 0
-func (st *StatusRegister) SetPointerRegisterSet0() {
+// SelectPointerRegisterSet0 selects pointer register set 0
+func (st *StatusRegister) SelectPointerRegisterSet0() {
 	*st &= StatusRegister(STPointerRegisterClear)
 }
 
-// SetPointerRegisterSet1 selects pointer register set 1
-func (st *StatusRegister) SetPointerRegisterSet1() {
+// SelectPointerRegisterSet1 selects pointer register set 1
+func (st *StatusRegister) SelectPointerRegisterSet1() {
 	*st |= StatusRegister(STPointerRegisterSet)
 }
 
@@ -284,18 +273,13 @@ func (st StatusRegister) CounterRegisterSet0() bool {
 	return (uint32(st) & STCounterRegisterSet) == 0
 }
 
-// CounterRegisterSet1 returns true if counter register set 1 is selected
-func (st StatusRegister) CounterRegisterSet1() bool {
-	return (uint32(st) & STCounterRegisterSet) == STCounterRegisterSet
-}
-
-// SetCounterRegisterSet0 selects counter register set 0
-func (st *StatusRegister) SetCounterRegisterSet0() {
+// SelectCounterRegisterSet0 selects counter register set 0
+func (st *StatusRegister) SelectCounterRegisterSet0() {
 	*st &= StatusRegister(STCounterRegisterClear)
 }
 
-// SetCounterRegisterSet1 selects counter register set 1
-func (st *StatusRegister) SetCounterRegisterSet1() {
+// SelectCounterRegisterSet1 selects counter register set 1
+func (st *StatusRegister) SelectCounterRegisterSet1() {
 	*st |= StatusRegister(STCounterRegisterSet)
 }
 
@@ -304,8 +288,8 @@ func (st StatusRegister) OperandSize() uint8 {
 	return uint8((uint32(st) & STOperandRead) >> STOperandShift)
 }
 
-// SetOperandSize sets the operand size
-func (st *StatusRegister) SetOperandSize(om uint8) {
+// SelectOperandSize selects the operand size
+func (st *StatusRegister) SelectOperandSize(om uint8) {
 	gofuncs.PanicBM(om <= Operand64, STOperandModeErr)
 
 	*st = StatusRegister((uint32(*st) & STOperandSet) + (uint32(om) << STOperandShift))
@@ -316,8 +300,8 @@ func (st StatusRegister) MathMode() uint8 {
 	return uint8((uint32(st) & STMathRead) >> STMathShift)
 }
 
-// SetMathMode sets the math mode
-func (st *StatusRegister) SetMathMode(mm uint8) {
+// SelectMathMode sets the math mode
+func (st *StatusRegister) SelectMathMode(mm uint8) {
 	gofuncs.PanicBM(mm <= MathFloat, STMathModeErr)
 
 	*st = StatusRegister((uint32(*st) & STMathSet) + (uint32(mm) << STMathShift))
