@@ -154,9 +154,18 @@ const STMathModeErr = "Math mode must be <= 3"
 // 8 bits reserved for system use, and 8 bits reserved for users.
 type StatusRegister uint32
 
-// Carry returns true if the carry flag is set
-func (st StatusRegister) Carry() bool {
+// IsCarry returns true if the carry flag is set
+func (st StatusRegister) IsCarry() bool {
 	return (uint32(st) & STCarrySet) == STCarrySet
+}
+
+// Carry sets the carry to the given value
+func (st *StatusRegister) Carry(val bool) {
+	if val {
+		st.SetCarry()
+	} else {
+		st.ClearCarry()
+	}
 }
 
 // SetCarry sets the carry flag
@@ -169,9 +178,18 @@ func (st *StatusRegister) ClearCarry() {
 	*st &= StatusRegister(STCarryClear)
 }
 
-// Overflow returns true if the overflow flag is set
-func (st StatusRegister) Overflow() bool {
+// IsOverflow returns true if the overflow flag is set
+func (st StatusRegister) IsOverflow() bool {
 	return (uint32(st) & STOverflowSet) == STOverflowSet
+}
+
+// Overflow sets the overflow to the given value
+func (st *StatusRegister) Overflow(val bool) {
+	if val {
+		st.SetOverflow()
+	} else {
+		st.ClearOverflow()
+	}
 }
 
 // SetOverflow sets the overflow flag
@@ -184,24 +202,42 @@ func (st *StatusRegister) ClearOverflow() {
 	*st &= StatusRegister(STOverflowClear)
 }
 
-// Zero returns true if the overflow flag is set
-func (st StatusRegister) Zero() bool {
+// IsZero returns true if the zero flag is set
+func (st StatusRegister) IsZero() bool {
 	return (uint32(st) & STZeroSet) == STZeroSet
 }
 
-// SetZero sets the overflow flag
+// Zero sets zero to the given value
+func (st *StatusRegister) Zero(val bool) {
+	if val {
+		st.SetZero()
+	} else {
+		st.ClearZero()
+	}
+}
+
+// SetZero sets the zero flag
 func (st *StatusRegister) SetZero() {
 	*st |= StatusRegister(STZeroSet)
 }
 
-// ClearZero clears the overflow flag
+// ClearZero clears the zero flag
 func (st *StatusRegister) ClearZero() {
 	*st &= StatusRegister(STZeroClear)
 }
 
-// Negative returns true if the negative flag is set
-func (st StatusRegister) Negative() bool {
+// IsNegative returns true if the negative flag is set
+func (st StatusRegister) IsNegative() bool {
 	return (uint32(st) & STNegativeSet) == STNegativeSet
+}
+
+// Negative sets negative to the given value
+func (st *StatusRegister) Negative(val bool) {
+	if val {
+		st.SetNegative()
+	} else {
+		st.ClearNegative()
+	}
 }
 
 // SetNegative sets the negative flag
@@ -226,9 +262,18 @@ func (st *StatusRegister) SelectAddressMode(am uint8) {
 	*st = StatusRegister((uint32(*st) & STAddressSet) + (uint32(am) << STAddressShift))
 }
 
-// InterruptDisable returns true if the interrupt disable flag is set
-func (st StatusRegister) InterruptDisable() bool {
+// IsInterruptDisable returns true if the interrupt disable flag is set
+func (st StatusRegister) IsInterruptDisable() bool {
 	return (uint32(st) & STInterruptDisableSet) == STInterruptDisableSet
+}
+
+// InterruptDisable sets the interrupt disable to the given value
+func (st *StatusRegister) InterruptDisable(val bool) {
+	if val {
+		st.SetInterruptDisable()
+	} else {
+		st.ClearInterruptDisable()
+	}
 }
 
 // SetInterruptDisable sets the interrupt disable flag
@@ -253,9 +298,18 @@ func (st *StatusRegister) SelectRegister(rm uint8) {
 	*st = StatusRegister((uint32(*st) & STRegisterSet) + (uint32(rm) << STRegisterShift))
 }
 
-// PointerRegisterSet0 returns true if pointer register set 0 is selected
-func (st StatusRegister) PointerRegisterSet0() bool {
+// IsPointerRegisterSet0 returns true if pointer register set 0 is selected
+func (st StatusRegister) IsPointerRegisterSet0() bool {
 	return (uint32(st) & STPointerRegisterSet) == 0
+}
+
+// PointerRegisterSet0 selects pointer register set 0 if the value is true, else selects pointer register set 1
+func (st *StatusRegister) PointerRegisterSet0(val bool) {
+	if val {
+		st.SelectPointerRegisterSet0()
+	} else {
+		st.SelectPointerRegisterSet1()
+	}
 }
 
 // SelectPointerRegisterSet0 selects pointer register set 0
@@ -268,9 +322,18 @@ func (st *StatusRegister) SelectPointerRegisterSet1() {
 	*st |= StatusRegister(STPointerRegisterSet)
 }
 
-// CounterRegisterSet0 returns true if counter register set 0 is selected
-func (st StatusRegister) CounterRegisterSet0() bool {
+// IsCounterRegisterSet0 returns true if counter register set 0 is selected
+func (st StatusRegister) IsCounterRegisterSet0() bool {
 	return (uint32(st) & STCounterRegisterSet) == 0
+}
+
+// CounterRegisterSet0 selects counter register set 0 if the value is true, else selects counter register set 1
+func (st *StatusRegister) CounterRegisterSet0(val bool) {
+	if val {
+		st.SelectCounterRegisterSet0()
+	} else {
+		st.SelectCounterRegisterSet1()
+	}
 }
 
 // SelectCounterRegisterSet0 selects counter register set 0

@@ -11,39 +11,39 @@ func TestStatusRegister(t *testing.T) {
 
 	// Carry
 	*st = 0xFFFFFFFF
-	assert.True(t, st.Carry())
+	assert.True(t, st.IsCarry())
 	st.ClearCarry()
-	assert.False(t, st.Carry())
+	assert.False(t, st.IsCarry())
 	assert.Equal(t, StatusRegister(0x7FFFFFFF), *st)
 	st.SetCarry()
-	assert.True(t, st.Carry())
+	assert.True(t, st.IsCarry())
 	assert.Equal(t, StatusRegister(0xFFFFFFFF), *st)
 
 	// Overflow
-	assert.True(t, st.Overflow())
+	assert.True(t, st.IsOverflow())
 	st.ClearOverflow()
-	assert.False(t, st.Overflow())
+	assert.False(t, st.IsOverflow())
 	assert.Equal(t, StatusRegister(0xBFFFFFFF), *st)
 	st.SetOverflow()
-	assert.True(t, st.Overflow())
+	assert.True(t, st.IsOverflow())
 	assert.Equal(t, StatusRegister(0xFFFFFFFF), *st)
 
 	// Zero
-	assert.True(t, st.Zero())
+	assert.True(t, st.IsZero())
 	st.ClearZero()
-	assert.False(t, st.Zero())
+	assert.False(t, st.IsZero())
 	assert.Equal(t, StatusRegister(0xDFFFFFFF), *st)
 	st.SetZero()
-	assert.True(t, st.Zero())
+	assert.True(t, st.IsZero())
 	assert.Equal(t, StatusRegister(0xFFFFFFFF), *st)
 
 	// Negative
-	assert.True(t, st.Negative())
+	assert.True(t, st.IsNegative())
 	st.ClearNegative()
-	assert.False(t, st.Negative())
+	assert.False(t, st.IsNegative())
 	assert.Equal(t, StatusRegister(0xEFFFFFFF), *st)
 	st.SetNegative()
-	assert.True(t, st.Negative())
+	assert.True(t, st.IsNegative())
 	assert.Equal(t, StatusRegister(0xFFFFFFFF), *st)
 
 	// Address
@@ -74,12 +74,12 @@ func TestStatusRegister(t *testing.T) {
 	assert.Equal(t, StatusRegister(0xFFFFFFFF), *st)
 
 	// InterruptDisable
-	assert.True(t, st.InterruptDisable())
+	assert.True(t, st.IsInterruptDisable())
 	st.ClearInterruptDisable()
-	assert.False(t, st.InterruptDisable())
+	assert.False(t, st.IsInterruptDisable())
 	assert.Equal(t, StatusRegister(0xFEFFFFFF), *st)
 	st.SetInterruptDisable()
-	assert.True(t, st.InterruptDisable())
+	assert.True(t, st.IsInterruptDisable())
 	assert.Equal(t, StatusRegister(0xFFFFFFFF), *st)
 
 	// Register
@@ -98,21 +98,21 @@ func TestStatusRegister(t *testing.T) {
 	assert.Equal(t, StatusRegister(0xFFFFFFFF), *st)
 
 	// Pointer Register Set
-	assert.False(t, st.PointerRegisterSet0())
+	assert.False(t, st.IsPointerRegisterSet0())
 	st.SelectPointerRegisterSet0()
-	assert.True(t, st.PointerRegisterSet0())
+	assert.True(t, st.IsPointerRegisterSet0())
 	assert.Equal(t, StatusRegister(0xFFDFFFFF), *st)
 	st.SelectPointerRegisterSet1()
-	assert.False(t, st.PointerRegisterSet0())
+	assert.False(t, st.IsPointerRegisterSet0())
 	assert.Equal(t, StatusRegister(0xFFFFFFFF), *st)
 
 	// Counter Register Set
-	assert.False(t, st.CounterRegisterSet0())
+	assert.False(t, st.IsCounterRegisterSet0())
 	st.SelectCounterRegisterSet0()
-	assert.True(t, st.CounterRegisterSet0())
+	assert.True(t, st.IsCounterRegisterSet0())
 	assert.Equal(t, StatusRegister(0xFFEFFFFF), *st)
 	st.SelectCounterRegisterSet1()
-	assert.False(t, st.CounterRegisterSet0())
+	assert.False(t, st.IsCounterRegisterSet0())
 	assert.Equal(t, StatusRegister(0xFFFFFFFF), *st)
 
 	// Operand Size

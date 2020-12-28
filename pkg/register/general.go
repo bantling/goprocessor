@@ -21,6 +21,18 @@ const (
 
 	// SignBitExtend32 is the bit pattern to sign extend a 32 bit value
 	SignBitExtend32 uint64 = 0xFFFFFFFF80000000
+
+	// MaxUint8 is largest 8 bit unsigned value within a uint64, and a mask for only lowest 8 bits
+	MaxUint8 uint64 = 0x00000000000000FF
+
+	// MaxUint16 is largest 16 bit unsigned value within a uint64, and a mask for only lowest 16 bits
+	MaxUint16 uint64 = 0x000000000000FFFF
+
+	// MaxUint32 is largest 32 bit unsiged value within a uint64, and a mask for only lowest 32 bits
+	MaxUint32 uint64 = 0x00000000FFFFFFFF
+
+	// MaxUint64 is largest 64 bit unsiged value
+	MaxUint64 uint64 = 0xFFFFFFFFFFFFFFFF
 )
 
 // GeneralRegister defines a general register
@@ -126,4 +138,22 @@ func (r *GeneralRegister) SetInt32(val int32) {
 // SetInt64 sets the register to the given int64 value
 func (r *GeneralRegister) SetInt64(val int64) {
 	*r = GeneralRegister(val)
+}
+
+// extendSign extends the sign of the vregister, considering the current operand size
+func (r *GeneralRegister) extendSign(st StatusRegister) {
+
+}
+
+// AddInteger sets r = r + r2 + Carry using integer math, with the following side :
+// Carry is true if unsigned result > max unsigned value of current operand size
+// Overflow is true if signed result > max signed positive value of current operand size
+// Zero is true if result is zero
+// Negative is true if result is negative
+// Result is sign extended if operand size < 64 bits
+func (r *GeneralRegister) AddInteger(r2 GeneralRegister, st *StatusRegister) {
+	*r += r2
+	if st.IsCarry() {
+		*r++
+	}
 }

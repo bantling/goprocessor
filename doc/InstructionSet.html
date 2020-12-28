@@ -30,7 +30,7 @@
              url("roboto-mono.ttf") format("truetype"),
              url("roboto-mono.svg#webfont") format("svg");
       }
-    
+      
       /* Clear spacings */
       * {
         margin: 0;
@@ -107,6 +107,11 @@
       td[colspan="4"] {
         font-weight: bold;
         padding: 10px 5px;
+      }
+      
+      /* the pre class uses preformatted text */
+      .pre td {
+        white-space: pre;
       }
       
       /* Colours for the opcodes legends */
@@ -444,7 +449,103 @@
     </script>
   </head>
   <body onload="doLoad();">
-    <h1>Instruction Set</h1> 
+    <h1>Instruction Set</h1>
+    
+    <h2>Example code</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Comment</th>
+          <th>Code</th>
+        </tr>
+      </thead>
+      <tbody class="pre">
+        <tr>
+          <td>Read/write single 8 bit value
+</td>
+          <td>  SEL   SET0      ; Select R0, PTR0, OFS0, IX0, IS0, CTR0, CS0 
+  SIZE  8         ; Read/write 8 bits to memory
+  LD    PTR, 0x100; Load pointer with address DP + 0x100
+  RD    R,   *PTR ; Read derefd pointer into R (read address DP + 0x100)
+  INC   R         ; R = R + 1
+  WD    R,   *PTR ; Write R into derefd pointer (write address DP + 0x100)
+</td>
+        </tr>
+        <tr>
+          <td>Sum one dimensional array of 10 16-bit ints</td>
+          <td>  SEL   SET0       ; Select R0, PTR0, OFS0, IX0, IS0, CTR0, CS0
+  SIZE  16         ; Read/write 16 bits to memory
+  LD    PTR, 0x100 ; Load pointer with address DP + 0x100
+  LOOP  10         ; IX0 = 0, IS0 = 1, CTR0 = 10, CS0 = 1
+  ZRO   R          ; R0 = 0
+SUM:
+  ADD   R,   *[PTR]; R0 = R0 + (DP + 0x100 + IX0) 
+  NXT   IX         ; IX0 = IX0 + IS0 
+  NXT   CTR        ; CTR0 = CTR0 - CS0
+  BNE   SUM        ; LOOP again if CTR0 > 0
+                   ; R contains sum of (DP + 0x100) thru (DP + 0x109)
+</td>
+        </tr>
+        <tr>
+          <td>Sum two dimensional array of 5 rows of 10 32-bit ints</td>
+          <td>  SEL   SET0         ; Select R0, PTR0, OFS0, IX0, IS0, CTR0, CS0
+  SIZE  32           ; Read/write 32 bits to memory
+  LD    PTR, 0x100   ; Load pointer with address DP + 0x100
+  LOOP  10, 40       ; IX0 = 0, IS0 = 40 (size of 1 row of 10 32-bit ints), CTR0 = 10, CS0 = 1
+  ZRO   OFS          ; OFS = 0
+  ZRO   R            ; R0 = 0
+SUM:
+  ADD   R,   *([PTR]); R0 = R0 + (DP + 0x100 + IX0 + OFS0)
+  NXT   OFS          ; OFS0 = OFS0 + 4 (SIZE = 32)
+  CMP   OFS, 40      ; Z = 1 if OFS == 40
+  BNE   SUM          ; Loop until we've summed all 10 32-bit values in current row
+  NXT   IX           ; IX0 = IX0 + IS0 (next row)
+  ZRO   OFS          ; OFS0 = 0 
+  NXT   CTR          ; CTR0 = CTR0 - CS0
+  BNE   SUM          ; LOOP again if CTR0 > 0
+                     ; R contains sum of (DP + 0x100) thru (DP + 0x1C8) 
+</td>
+        </tr>
+        <tr>
+          <td>Access an 8-bit field of an object</td>
+          <td>  SEL   SET0       ; Select R0, PTR0, OFS0, IX0, IS0, CTR0, CS0 
+  SIZE  8          ; Read/write 8 bits to memory
+  LD    PTR, 0x100 ; Load pointer with address DP + 0x100
+  LD    OFS, 0x10  ; Field offset
+  RD    R,   *(PTR); Read derefd pointer into R (read address DP + 0x100 + 0x10)
+  INC   R          ; R = R + 1
+  WD    R,   *(PTR); Write R into derefd pointer (write address DP + 0x100 + 0x10)
+          </td>
+        </tr>
+        <tr>
+          <td>Execute a method for an object</td>
+          <td>  SEL   SET0        ; Select R0, PTR0, OFS0, IX0, IS0, CTR0, CS0 
+  SIZE  32          ; Read/write 32 bits to memory
+  LD    PTR, 0x100  ; Load pointer with address DP + 0x100 (which points to class def at 0x200) 
+  PSH   PTR         ; Push object address (DP + 0x100) on stack for value of "this"
+  LD    OFS, 0x10   ; Field offset of method
+  RD    R,   *(*PTR); Read method pointer into R (read address DP + 0x200 + 0x10, contains pointer to method at 0x300)
+  JSR   R           ; Call method
+  ...
+
+0x300:
+  PSH   ST          ; Push status register
+  SEL   SET0        ; Select R0, PTR0, OFS0, IX0, IS0, CTR0, CS0
+  PSH   OFS         ; Push OFS0
+  PSH   R0          ; Push R0
+                    ; Stack has 32-bit this ptr (0x100), 32-bit ptr of caller after JSR, 32-bit ST, 16-bit OFS, 32-bit R0
+  SIZE  32          ; Read/write 32 bits to memory
+  LD    PTR, *SP[14]; Add 14 bytes to SP to skip R0, OFS, ST and ptr to caller, read this ptr
+  LD    OFS, 0x20   ; Field offset of this object
+  RD    R,   *(PTR) ; R0 = 32 bits from (DP + 0x100 + 0x20)
+  ...
+  PUL OFS           ; PUL OFS
+  PUL ST            ; PUL ST
+  RTS               ; Return to caller 
+          </td>
+        </tr>
+      </tbody>
+    </table> 
     
     <h2>Registers</h2>
     <table>
