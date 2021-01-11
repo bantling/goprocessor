@@ -173,6 +173,10 @@
         background-color: #E2CB1B;
       }
       
+      .ins0-meta {
+        background-color: #CC2C2F;
+      }
+      
       /* Colour for the highlighting of opcodes */
       .hover {
         background-color: #EEEEEE;
@@ -184,6 +188,10 @@
       }
       
       .count-ins0-branch::before {
+        content: "0";
+      }
+      
+      .count-ins0-meta::before {
         content: "0";
       }
       
@@ -326,7 +334,7 @@
                * In such cases, convert undefined to 0.
                */
               function(a, b) {
-                var compare = (opcodeCounts[b[2].className] || 0) - (opcodeCounts[a[2].className] || 0);
+                var compare = ((b[2] && opcodeCounts[b[2].className]) || 0) - ((a[2] && opcodeCounts[a[2].className]) || 0);
                 return compare !== 0 ? compare : a[0].textContent.localeCompare(b[0].textContent);
               }
             ).reduce(
@@ -463,23 +471,25 @@
         <tr>
           <td>Read/write single 8 bit value
 </td>
-          <td>  SEL   SET0      ; Select R0, PTR0, OFS0, IX0, IS0, CTR0, CS0 
-  SIZE  8         ; Read/write 8 bits to memory
-  LD    PTR, 0x100; Load pointer with address DP + 0x100
-  RD    R,   *PTR ; Read derefd pointer into R (read address DP + 0x100)
-  INC   R         ; R = R + 1
-  WD    R,   *PTR ; Write R into derefd pointer (write address DP + 0x100)
+          <td>  RSET0            ; Select R0, PTR0, OFS0, IX0, IS0, CTR0, CS0 
+  SOS0             ; Read/write 8 bits
+  SAM0             ; *PTR
+  LD    PTR, 0x100 ; Load pointer with address DP + 0x100
+  RD    R,   *PTR  ; Read address DP + 0x100 into R
+  INC   R          ; R = R + 1
+  WD    R,   *PTR  ; Write R into derefd pointer (write address DP + 0x100)
 </td>
         </tr>
         <tr>
           <td>Sum one dimensional array of 10 16-bit ints</td>
-          <td>  SEL   SET0       ; Select R0, PTR0, OFS0, IX0, IS0, CTR0, CS0
-  SIZE  16         ; Read/write 16 bits to memory
+          <td>  RSET0            ; Select R0, PTR0, OFS0, IX0, IS0, CTR0, CS0
+  SOS1             ; Read/write 16 bits
+  SAM2             ; *[PTR]
   LD    PTR, 0x100 ; Load pointer with address DP + 0x100
   LOOP  10         ; IX0 = 0, IS0 = 1, CTR0 = 10, CS0 = 1
   ZRO   R          ; R0 = 0
 SUM:
-  ADD   R,   *[PTR]; R0 = R0 + (DP + 0x100 + IX0) 
+  ADD   R,   *PTR  ; R0 = R0 + *(DP + 0x100 + IX0) 
   NXT   IX         ; IX0 = IX0 + IS0 
   NXT   CTR        ; CTR0 = CTR0 - CS0
   BNE   SUM        ; LOOP again if CTR0 > 0
@@ -488,60 +498,95 @@ SUM:
         </tr>
         <tr>
           <td>Sum two dimensional array of 5 rows of 10 32-bit ints</td>
-          <td>  SEL   SET0         ; Select R0, PTR0, OFS0, IX0, IS0, CTR0, CS0
-  SIZE  32           ; Read/write 32 bits to memory
-  LD    PTR, 0x100   ; Load pointer with address DP + 0x100
-  LOOP  10, 40       ; IX0 = 0, IS0 = 40 (size of 1 row of 10 32-bit ints), CTR0 = 10, CS0 = 1
-  ZRO   OFS          ; OFS = 0
-  ZRO   R            ; R0 = 0
+          <td>  RSET0            ; Select R0, PTR0, OFS0, IX0, IS0, CTR0, CS0
+  SOS2             ; Read/write 32 bits
+  SAM3             ; *([PTR])
+  LD    PTR, 0x100 ; Load pointer with address DP + 0x100
+  LOOP  10, 40     ; IX0 = 0, IS0 = 40 (size of 1 row of 10 32-bit ints), CTR0 = 10, CS0 = 1
+  ZRO   OFS        ; OFS = 0
+  ZRO   R          ; R0 = 0
 SUM:
-  ADD   R,   *([PTR]); R0 = R0 + (DP + 0x100 + IX0 + OFS0)
-  NXT   OFS          ; OFS0 = OFS0 + 4 (SIZE = 32)
-  CMP   OFS, 40      ; Z = 1 if OFS == 40
-  BNE   SUM          ; Loop until we've summed all 10 32-bit values in current row
-  NXT   IX           ; IX0 = IX0 + IS0 (next row)
-  ZRO   OFS          ; OFS0 = 0 
-  NXT   CTR          ; CTR0 = CTR0 - CS0
-  BNE   SUM          ; LOOP again if CTR0 > 0
-                     ; R contains sum of (DP + 0x100) thru (DP + 0x1C8) 
+  ADD   R,   *PTR  ; R0 = R0 + (DP + 0x100 + IX0 + OFS0)
+  NXT   OFS        ; OFS0 = OFS0 + 4 (SIZE = 32)
+  CMP   OFS, 40    ; Z = 1 if OFS == 40
+  BNE   SUM        ; Loop until we've summed all 10 32-bit values in current row
+  NXT   IX         ; IX0 = IX0 + IS0 (next row)
+  ZRO   OFS        ; OFS0 = 0 
+  NXT   CTR        ; CTR0 = CTR0 - CS0
+  BNE   SUM        ; LOOP again if CTR0 > 0
+                   ; R0 contains sum of (DP + 0x100) thru (DP + 0x1C8) 
 </td>
         </tr>
         <tr>
           <td>Access an 8-bit field of an object</td>
-          <td>  SEL   SET0       ; Select R0, PTR0, OFS0, IX0, IS0, CTR0, CS0 
-  SIZE  8          ; Read/write 8 bits to memory
+          <td>  RSET0            ; Select R0, PTR0, OFS0, IX0, IS0, CTR0, CS0 
+  SOS0             ; Read/write 8 bits
+  SAM1             ; *(PTR)
   LD    PTR, 0x100 ; Load pointer with address DP + 0x100
   LD    OFS, 0x10  ; Field offset
-  RD    R,   *(PTR); Read derefd pointer into R (read address DP + 0x100 + 0x10)
+  RD    R,   *PTR  ; R0 = *(DP + 0x100 + 0x10)
   INC   R          ; R = R + 1
-  WD    R,   *(PTR); Write R into derefd pointer (write address DP + 0x100 + 0x10)
+  WD    R,   *PTR  ; *(DP + 0x100 + 0x10) = R
           </td>
         </tr>
         <tr>
           <td>Execute a method for an object</td>
-          <td>  SEL   SET0        ; Select R0, PTR0, OFS0, IX0, IS0, CTR0, CS0 
-  SIZE  32          ; Read/write 32 bits to memory
+          <td>  RSET0             ; Select R0, PTR0, OFS0, IX0, IS0, CTR0, CS0 
+  SOS2              ; Read/write 32 bits
+  SAM5              ; *(*PTR)
   LD    PTR, 0x100  ; Load pointer with address DP + 0x100 (which points to class def at 0x200) 
   PSH   PTR         ; Push object address (DP + 0x100) on stack for value of "this"
   LD    OFS, 0x10   ; Field offset of method
-  RD    R,   *(*PTR); Read method pointer into R (read address DP + 0x200 + 0x10, contains pointer to method at 0x300)
+  RD    R,   *PTR   ; R0 = *(*(DP + 0x100) + 0x10) = *(DP + 0x200 + 0x10), contains pointer to method at 0x300)
   JSR   R           ; Call method
   ...
 
 0x300:
   PSH   ST          ; Push status register
-  SEL   SET0        ; Select R0, PTR0, OFS0, IX0, IS0, CTR0, CS0
+  RSET0             ; Select R0, PTR0, OFS0, IX0, IS0, CTR0, CS0
+  SAM1              ; *(PTR)
   PSH   OFS         ; Push OFS0
   PSH   R0          ; Push R0
                     ; Stack has 32-bit this ptr (0x100), 32-bit ptr of caller after JSR, 32-bit ST, 16-bit OFS, 32-bit R0
-  SIZE  32          ; Read/write 32 bits to memory
-  LD    PTR, *SP[14]; Add 14 bytes to SP to skip R0, OFS, ST and ptr to caller, read this ptr
+  SOS2              ; Read/write 32 bits
+  LD    PTR, *SP[18]; Add 18 bytes to skip R0 (64 bits), OFS (16 bits), ST (32 bits) and caller (32 bits), read this ptr
   LD    OFS, 0x20   ; Field offset of this object
-  RD    R,   *(PTR) ; R0 = 32 bits from (DP + 0x100 + 0x20)
+  RD    R,   *PTR   ; R0 = *(DP + 0x100 + 0x20)
   ...
   PUL OFS           ; PUL OFS
   PUL ST            ; PUL ST
   RTS               ; Return to caller 
+          </td>
+        </tr>
+        <tr>
+          <td>All addressing modes</td>
+          <td>  RSET0         ; Select R0, PTR0, OFS0, IX0, IS0, CTR0, CS0
+  SOS0          ; Read/write 8 bits
+  LD PTR, 0x100 ; Load pointer with address DP + 0x100
+  LD OFS, 0x10  ; Offset 0x10
+  LD IX,  0x20  ; Index 0x20
+  SAM0          ; *PTR
+  RD R,   *PTR  ; R0 = *(DP + 0x100)
+  SAM1          ; *(PTR)
+  RD R,   *PTR  ; R0 = *(DP + 0x100 + 0x10), could be index of array or field of object
+  SAM2          ; *[PTR]
+  RD R,   *PTR  ; R0 = *(DP + 0x100 + 0x20), could be index of array or field of object
+  SAM3          ; *([PTR])
+  RD R,   *PTR  ; R0 = *(DP + 0x10 + 0x10 + 0x20), could be 2d array, field of 1d array of objects
+                ; Assume DP + 0x100 contains pointer to 0x200
+                ; Assume DP + 0x200 contains pointer to 0x300
+                ; Assume DP + 0x210 contains pointer to 0x400
+                ; Assume DP + 0x220 contains pointer to 0x500
+                ; Assume DP + 0x230 contains pointer to 0x600
+  SOS2          ; Read/write 32 bits
+  SAM4          ; **PTR
+  RD R,   *PTR  ; Read *(*(DP + 0x100)) = *(DP + 0x200) = *0x300
+  SAM5          ; *(*PTR)
+  RD R,   *PTR  ; Read *(*(DP + 0x100) + 0x10) = *(DP + 0x200 + 0x10) = *0x400
+  SAM6          ; *[*PTR]
+  RD R,   *PTR  ; Read *(*(DP + 0x100) + 0x20) = *(DP + 0x200 + 0x20) = *0x500
+  SAM7          ; *([PTR])
+  RD R,   *PTR  ; Read *(*(DP + 0x100) + 0x10 + 0x20) = *(DP + 0x200 + 0x30) = *0x600
           </td>
         </tr>
       </tbody>
@@ -599,8 +644,12 @@ SUM:
           <td>32 bit unsigned program counter</td>
         </tr>
         <tr>
+          <td>DP</td>
+          <td>32 bit unsigned data pointer</td>
+        </tr>
+        <tr>
           <td>ST</td>
-          <td>32 bit status register, consists of CVZNAAAI RRPTOOMM SSSSSSSS UUUUUUUU:<br>
+          <td>32 bit unsigned status register, consists of CVZNAAAI RRPTOOMM SSSSSSSS UUUUUUUU:<br>
               Carry, oVerflow, Zero, Negative, Address mode, Interrupt Disable<br>
               Register, Pointer register, counTer register, Operand size, Math mode<br>
               There are 8 bits reserved for system use, and 8 bits reserved for users.
@@ -609,13 +658,16 @@ SUM:
         <tr>
           <td>SB</td>
           <td>
-            32 bit stack base register<br>
+            32 bit unsigned stack base register<br>
             Default location is FFFE0000 (second highest 64k)
           </td>
         </tr>
         <tr>
           <td>SP</td>
-          <td>16 bit stack pointer register</td>
+          <td>
+            16 bit unsigned stack pointer register<br>
+            Default value is FFFF (counts backwards as items are pushed)
+          </td>
         </tr>
       </tbody>
     </table>
@@ -649,12 +701,12 @@ SUM:
           <td>AAA</td>
           <td>
             Selected Address Mode (PTR = 100, OFS = 25, IX = 400, address 100 has pointer to address 200)<br>
-            000 = *PTR = PTR = 100<br>
-            001 = *(PTR) = PTR + OFS = 125<br>
-            010 = *[PTR] = PTR + IX = 500<br>
-            011 = *([PTR]) = PTR + IX + OFS = 525<br>
-            100 = **PTR = *PTR = 200<br>
-            101 = **(PTR): *PTR + OFS = 200 + 25 = 225<br>
+            000 = *PTR = *(PTR) = *100<br>
+            001 = *(PTR) = *(PTR + OFS) = *125<br>
+            010 = *[PTR] = *(PTR + IX) = *500<br>
+            011 = *([PTR]) = *(PTR + IX + OFS) = *525<br>
+            100 = **PTR = **(PTR) = **100 = *200<br>
+            101 = **(PTR): **(PTR + OFS) = *(200 + 25) = *225<br>
             110 = **[PTR]: *PTR + IX = 200 + 400 = 600<br>
             111 = **([PTR]): *PTR + IX + OFS = 200 + 400 + 25 = 625
           </td>
@@ -882,26 +934,6 @@ SUM:
           <td>CVZN---- --------</td>
         </tr>
         <tr>
-          <td>TCLR</td>
-          <td>Test bits clear</td>
-          <td>
-            R = pattern to test, Rc = value to test<br>
-            R = pattern to test, *PTR = value to test<br>
-            Z = 1 if every bit set in R is clear in Rc/*PTR
-          </td>
-          <td>CVZN---- --------</td>
-        </tr>
-        <tr>
-          <td>TSET</td>
-          <td>Test bits set</td>
-          <td>
-            R = pattern to test, Rc = value to test<br>
-            R = pattern to test, *PTR = value to test<br>
-            Z = 1 if every bit set in R is set in Rc/*PTR
-          </td>
-          <td>CVZN---- --------</td>
-        </tr>
-        <tr>
           <td>XOR</td>
           <td>Bitwise XOR</td>
           <td>
@@ -930,38 +962,6 @@ SUM:
           <td>-------- --------</td>
         </tr>
         <tr>
-          <td>BEQ</td>
-          <td>Branch on equal to zero (Op1 = Op2)</td>
-          <td>
-            PC = PC + S8 if Z = 1
-          </td>
-          <td>-------- --------</td>
-        </tr>
-        <tr>
-          <td>BMI</td>
-          <td>Branch on negative</td>
-          <td>
-            PC = PC + S8 if N = 1
-          </td>
-          <td>-------- --------</td>
-        </tr>
-        <tr>
-          <td>BNE</td>
-          <td>Branch on not equal to zero (Op1 != Op2)</td>
-          <td>
-            PC = PC + S8 if Z = 0
-          </td>
-          <td>-------- --------</td>
-        </tr>
-        <tr>
-          <td>BPL</td>
-          <td>Branch on positive (or zero)</td>
-          <td>
-            PC = PC + S8 if N = 0
-          </td>
-          <td>-------- --------</td>
-        </tr>
-        <tr>
           <td>BVC (BLTS, BDZC)</td>
           <td>Branch on overflow clear (Op1 &lt; Op2 signed, Divide by zero clear)</td>
           <td>
@@ -974,6 +974,38 @@ SUM:
           <td>Branch on overflow set (Op1 &gt;= Op2 signed, Divide by zero set)</td>
           <td>
             PC = PC + S8 if V = 1
+          </td>
+          <td>-------- --------</td>
+        </tr>
+        <tr>
+          <td>BEQ</td>
+          <td>Branch on equal to zero (Op1 = Op2)</td>
+          <td>
+            PC = PC + S8 if Z = 1
+          </td>
+          <td>-------- --------</td>
+        </tr>
+        <tr>
+          <td>BNE</td>
+          <td>Branch on not equal to zero (Op1 != Op2)</td>
+          <td>
+            PC = PC + S8 if Z = 0
+          </td>
+          <td>-------- --------</td>
+        </tr>
+        <tr>
+          <td>BMI</td>
+          <td>Branch on negative</td>
+          <td>
+            PC = PC + S8 if N = 1
+          </td>
+          <td>-------- --------</td>
+        </tr>
+        <tr>
+          <td>BPL</td>
+          <td>Branch on positive (or zero)</td>
+          <td>
+            PC = PC + S8 if N = 0
           </td>
           <td>-------- --------</td>
         </tr>
@@ -1014,6 +1046,16 @@ SUM:
           <td>-------- --------</td>
         </tr>
         <tr>
+          <td>RTS</td>
+          <td>Return from subroutine</td>
+          <td>
+            Pull PC<br>
+            SP = SP + U8; Pull PC<br>
+            A hardware error occurs if the stack underflows
+          </td>
+          <td>-------- --------</td>
+        </tr>
+        <tr>
           <td>RTI</td>
           <td>Return from interrupt</td>
           <td>
@@ -1038,16 +1080,6 @@ SUM:
             A hardware error occurs if the stack underflows
           </td>
           <td>CVZNAAAI RRPTOOMM</td>
-        </tr>
-        <tr>
-          <td>RTS</td>
-          <td>Return from subroutine</td>
-          <td>
-            Pull PC<br>
-            SP = SP + U8; Pull PC<br>
-            A hardware error occurs if the stack underflows
-          </td>
-          <td>-------- --------</td>
         </tr>
         <tr>
           <td colspan="4">Floating Point (<span class="count-ins0-float"></span> opcodes)</td>
@@ -1189,40 +1221,89 @@ SUM:
           <td>--ZN--- --------</td>
         </tr>
         <tr>
-          <td colspan="4">Move and swap (<span class="count-ins0-move"></span> opcodes)</td>
+          <td colspan="4">Move (<span class="count-ins0-move"></span> opcodes)</td>
         </tr>
         <tr>
-          <td>MOV</td>
-          <td>Move data</td>
+          <td>LD</td>
+          <td>Load literal operand</td>
           <td>
-            MOV R,PTR<br>
-            MOV PTR,R<br>
-            MOV R,*PTR<br>
-            MOV *PTR,R<br>
-            MOV R,*SP[U8]<br>
-            MOV *SP[U8],R<br>
-            MOV R,O
+            LD R, O<br>
+            LD PTR, U32<br>
+            LD OFS, U16<br>
+            LD IX, U16<br>
+            LD IS, S16<br>
+            LD CTR, U32<br>
+            LD CS, U16<br>
+            LD DP, U32<br>
+            LD SB, U32<br>
+            LD SP, U32
           </td>
           <td>
             --ZN---- --------<br>
           </td>
         </tr>
         <tr>
+          <td>RD</td>
+          <td>Read register from register or memory</td>
+          <td>
+            RD R, Rc<br>
+            RD R, PTR<br>
+            RD R, *PTR<br>
+            RD R, OFS<br>
+            RD R, IX<br>
+            RD R, IS<br>
+            RD R, CTR<br>
+            RD R, CS<br>
+            RD R, DP<br>
+            RD R, ST<br>
+            RD R, SB<br>
+            RD R, SP<br>
+            RD R, *SP[U8]<br>
+            RD R, M; M = absolute memory address
+          </td>
+          <td>
+            --ZN---- --------<br>
+            RD R, ST does not affect flags
+          </td>
+        </tr>
+        <tr>
+          <td>WD</td>
+          <td>Write register to register or memory</td>
+          <td>
+            WD R, Rc<br>
+            WD R, PTR<br>
+            WD R, *PTR<br>
+            WD R, OFS<br>
+            WD R, IX<br>
+            WD R, IS<br>
+            WD R, CTR<br>
+            WD R, CS<br>
+            WD R, DP<br>
+            WD R, ST<br>
+            WD R, SB<br>
+            WD R, SP<br>
+            WD R, *SP[U8]<br>
+            WD R, M; M = absolute memory address
+          </td>
+          <td>
+            --ZN---- --------<br>
+            WD R, ST overwrites all flags
+          </td>
+        </tr>
+        <tr>
           <td>SWP</td>
           <td>Swap data</td>
           <td>
-            SWP R,Rc<br>
-            SWP R,PTR<br>
-            SWP R,*PTR<br>
-            SWP R,OFS<br>
-            SWP R,IX<br>
-            SWP R,IS<br>
-            SWP R,CTR<br>
-            SWP R,CS<br>
-            SWP R,ST<br>
-            SWP R,SB<br>
-            SWP R,*SP[U8]<br>
-            SWP R,M
+            SWP R, Rc<br>
+            SWP R, PTR<br>
+            SWP R, *PTR<br>
+            SWP R, OFS<br>
+            SWP R, IX<br>
+            SWP R, IS<br>
+            SWP R, CTR<br>
+            SWP R, CS<br>
+            SWP R, *SP[U8]<br>
+            SWP R, M; M = absolute memory address
           </td>
           <td>
             --ZN---- --------<br>
@@ -1256,12 +1337,12 @@ SUM:
             PSH OFS0<br>
             PSH IX0<br>
             PSH IS0<br>
+            PSH CTR0<br>
+            PSH CS0<br>
             PSH PTR1<br>
             PSH OFS1<br>
             PSH IX1<br>
             PSH IS1<br>
-            PSH CTR0<br>
-            PSH CS0<br>
             PSH CTR1<br>
             PSH CS1<br>
             PSH ST<br>
@@ -1284,19 +1365,19 @@ SUM:
             PUL OFS0<br>
             PUL IX0<br>
             PUL IS0<br>
+            PUL CTR0<br>
+            PUL CS0<br>
             PUL PTR1<br>
             PUL OFS1<br>
             PUL IX1<br>
             PUL IS1<br>
-            PUL CTR0<br>
-            PUL CS0<br>
             PUL CTR1<br>
             PUL CS1<br>
             PUL ST<br>
           </td>
           <td>
             ------- --------<br>
-            Except PUL ST which affects all flags
+            PUL ST affects all flags
           </td>
         </tr>
         <tr>
@@ -1315,169 +1396,169 @@ SUM:
           <td>CLC</td>
           <td>Clear carry flag (Clear NaN)</td>
           <td>Set C = 0</td>
-          <td>C------- --------</td>
-        </tr>
-        <tr>
-          <td>CLI</td>
-          <td>Clear interrupt disable flag</td>
-          <td>Set I = 0</td>
-          <td>-------I --------</td>
-        </tr>
-        <tr>
-          <td>SEA0</td>
-          <td>Select address mode 0</td>
-          <td>Set AAA = 0</td>
-          <td>----000- --------</td>
-        </tr>
-        <tr>
-          <td>SEA1</td>
-          <td>Select address mode 1</td>
-          <td>Set AAA = 1</td>
-          <td>----001- --------</td>
-        </tr>
-        <tr>
-          <td>SEA2</td>
-          <td>Select address mode 2</td>
-          <td>Set AAA = 2</td>
-          <td>----010- --------</td>
-        </tr>
-        <tr>
-          <td>SEA3</td>
-          <td>Select address mode 3</td>
-          <td>Set AAA = 3</td>
-          <td>----011- --------</td>
-        </tr>
-        <tr>
-          <td>SEA4</td>
-          <td>Select address mode 4</td>
-          <td>Set AAA = 4</td>
-          <td>----100- --------</td>
-        </tr>
-        <tr>
-          <td>SEA5</td>
-          <td>Select address mode 5</td>
-          <td>Set AAA = 5</td>
-          <td>----101- --------</td>
-        </tr>
-        <tr>
-          <td>SEA6</td>
-          <td>Select address mode 6</td>
-          <td>Set AAA = 6</td>
-          <td>----110- --------</td>
-        </tr>
-        <tr>
-          <td>SEA7</td>
-          <td>Select address mode 7</td>
-          <td>Set AAA = 7</td>
-          <td>----111- --------</td>
+          <td>0------- --------</td>
         </tr>
         <tr>
           <td>SEC</td>
           <td>Set carry flag (Set NaN)</td>
           <td>Set C = 1</td>
-          <td>C------- --------</td>
+          <td>1------- --------</td>
+        </tr>
+        <tr>
+          <td>SAM0</td>
+          <td>Select address mode 0: *PTR</td>
+          <td>Set AAA = 0</td>
+          <td>----000- --------</td>
+        </tr>
+        <tr>
+          <td>SAM1</td>
+          <td>Select address mode 1: *(PTR)</td>
+          <td>Set AAA = 1</td>
+          <td>----001- --------</td>
+        </tr>
+        <tr>
+          <td>SAM2</td>
+          <td>Select address mode 2: *[PTR]</td>
+          <td>Set AAA = 2</td>
+          <td>----010- --------</td>
+        </tr>
+        <tr>
+          <td>SAM3</td>
+          <td>Select address mode 3: *([PTR])</td>
+          <td>Set AAA = 3</td>
+          <td>----011- --------</td>
+        </tr>
+        <tr>
+          <td>SAM4</td>
+          <td>Select address mode 4: **PTR</td>
+          <td>Set AAA = 4</td>
+          <td>----100- --------</td>
+        </tr>
+        <tr>
+          <td>SAM5</td>
+          <td>Select address mode 5: *(*PTR)</td>
+          <td>Set AAA = 5</td>
+          <td>----101- --------</td>
+        </tr>
+        <tr>
+          <td>SAM6</td>
+          <td>Select address mode 6: *[*PTR]</td>
+          <td>Set AAA = 6</td>
+          <td>----110- --------</td>
+        </tr>
+        <tr>
+          <td>SAM7</td>
+          <td>Select address mode 7: **([PTR])</td>
+          <td>Set AAA = 7</td>
+          <td>----111- --------</td>
+        </tr>
+        <tr>
+          <td>CLI</td>
+          <td>Clear interrupt disable flag</td>
+          <td>Set I = 0</td>
+          <td>-------0 --------</td>
         </tr>
         <tr>
           <td>SEI</td>
           <td>Set interrupt disable flag</td>
           <td>Set I = 1</td>
-          <td>-------I --------</td>
+          <td>-------1 --------</td>
         </tr>
         <tr>
-          <td>SEM0</td>
-          <td>Select math mode 0</td>
-          <td>Set MM = 0</td>
-          <td>-------- ------00</td>
-        </tr>
-        <tr>
-          <td>SEM1</td>
-          <td>Select math mode 1</td>
-          <td>Set MM = 1</td>
-          <td>-------- ------01</td>
-        </tr>
-        <tr>
-          <td>SEM2</td>
-          <td>Select math mode 2</td>
-          <td>Set MM = 2</td>
-          <td>-------- ------10</td>
-        </tr>
-        <tr>
-          <td>SEM3</td>
-          <td>Select math mode 3</td>
-          <td>Set MM = 3</td>
-          <td>-------- ------11</td>
-        </tr>
-        <tr>
-          <td>SEO0</td>
-          <td>Select operand size 0 (8 bits)</td>
-          <td>Set OO = 0</td>
-          <td>-------- ----00--</td>
-        </tr>
-        <tr>
-          <td>SEO1</td>
-          <td>Select operand size 1 (16 bits)</td>
-          <td>Set OO = 1</td>
-          <td>-------- ----01--</td>
-        </tr>
-        <tr>
-          <td>SEO2</td>
-          <td>Select operand size 2 (32 bits)</td>
-          <td>Set OO = 2</td>
-          <td>-------- ----10--</td>
-        </tr>
-        <tr>
-          <td>SEO3</td>
-          <td>Select operand size 3 (64 bits)</td>
-          <td>Set OO = 3</td>
-          <td>-------- ----11--</td>
-        </tr>
-        <tr>
-          <td>SEPS0</td>
-          <td>Select pointer set 0</td>
-          <td>Set P = 0</td>
-          <td>-------- --0-----</td>
-        </tr>
-        <tr>
-          <td>SEPS1</td>
-          <td>Select pointer set 1</td>
-          <td>Set P = 1</td>
-          <td>-------- --1-----</td>
-        </tr>
-        <tr>
-          <td>SER0</td>
+          <td>SR0</td>
           <td>Select R0</td>
           <td>Set RR = 0</td>
           <td>-------- 00------</td>
         </tr>
         <tr>
-          <td>SER1</td>
+          <td>SR1</td>
           <td>Select R1</td>
           <td>Set RR = 1</td>
           <td>-------- 01------</td>
         </tr>
         <tr>
-          <td>SER2</td>
+          <td>SR2</td>
           <td>Select R2</td>
           <td>Set RR = 2</td>
           <td>-------- 10------</td>
         </tr>
         <tr>
-          <td>SER3</td>
+          <td>SR3</td>
           <td>Select R3</td>
           <td>Set RR = 3</td>
           <td>-------- 11------</td>
         </tr>
         <tr>
-          <td>SET0</td>
+          <td>SPS0</td>
+          <td>Select pointer set 0</td>
+          <td>Set P = 0</td>
+          <td>-------- --0-----</td>
+        </tr>
+        <tr>
+          <td>SPS1</td>
+          <td>Select pointer set 1</td>
+          <td>Set P = 1</td>
+          <td>-------- --1-----</td>
+        </tr>
+        <tr>
+          <td>SCS0</td>
           <td>Select counter set 0</td>
           <td>Set T = 0</td>
           <td>-------- ---0----</td>
         </tr>
         <tr>
-          <td>SET1</td>
+          <td>SCS1</td>
           <td>Select counter set 1</td>
           <td>Set T = 1</td>
           <td>-------- ---1----</td>
+        </tr>
+        <tr>
+          <td>SOS0</td>
+          <td>Select operand size 0 (8 bits)</td>
+          <td>Set OO = 0</td>
+          <td>-------- ----00--</td>
+        </tr>
+        <tr>
+          <td>SOS1</td>
+          <td>Select operand size 1 (16 bits)</td>
+          <td>Set OO = 1</td>
+          <td>-------- ----01--</td>
+        </tr>
+        <tr>
+          <td>SOS2</td>
+          <td>Select operand size 2 (32 bits)</td>
+          <td>Set OO = 2</td>
+          <td>-------- ----10--</td>
+        </tr>
+        <tr>
+          <td>SOS3</td>
+          <td>Select operand size 3 (64 bits)</td>
+          <td>Set OO = 3</td>
+          <td>-------- ----11--</td>
+        </tr>
+        <tr>
+          <td>SMM0</td>
+          <td>Select math mode 0</td>
+          <td>Set MM = 0</td>
+          <td>-------- ------00</td>
+        </tr>
+        <tr>
+          <td>SMM1</td>
+          <td>Select math mode 1</td>
+          <td>Set MM = 1</td>
+          <td>-------- ------01</td>
+        </tr>
+        <tr>
+          <td>SMM2</td>
+          <td>Select math mode 2</td>
+          <td>Set MM = 2</td>
+          <td>-------- ------10</td>
+        </tr>
+        <tr>
+          <td>SMM3</td>
+          <td>Select math mode 3</td>
+          <td>Set MM = 3</td>
+          <td>-------- ------11</td>
         </tr>
         <tr>
           <td colspan="4">Unary (<span class="count-ins0-unary"></span> opcodes)</td>
@@ -1535,8 +1616,9 @@ SUM:
         </tr>
         <tr>
           <td>NXT</td>
-          <td>Add step to register</td>
+          <td>Add step to register</td
           <td>
+            OFS = OFS + operand size (1 - 4)<br>
             IX = IX + IS<br>
             CTR = CTR - CS<br>
             CVZN are set the same as for ADD/SUB
@@ -1588,9 +1670,58 @@ SUM:
           <td>Set to 0</td>
           <td>
             R = 0<br>
+            OFS = 0<br>
             IX = 0
           </td>
           <td>--ZN---- --------</td>
+        </tr>
+        <tr>
+          <td colspan="4">Meta (<span class="count-ins0-meta"></span> opcodes)</td>
+        </tr>
+        <tr>
+          <td>LOOP</td>
+          <td>Load selected IX, IS, CTR, CS registers</td>
+          <td>
+            LOOP numberTimes<br>
+            LOOP numberTimes, indexStep<br>
+            IX = 0<br>
+            IS = 1 or provided indexStep<br>
+            CTR = numberTimes<br>
+            CS = 1
+          </td>
+          <td>-------- --------</td>
+        </tr>
+        <tr>
+          <td>RSET0</td>
+          <td>Select register set 0 = R0, PTR0, OFS0, IX0, IS0, CTR0, CS0</td>
+          <td>
+            RR = 00, P = 0, T = 0
+          </td>
+          <td>-------- 0000----</td>
+        </tr>
+        <tr>
+          <td>RSET1</td>
+          <td>Select register set 1 = R1, PTR1, OFS1, IX1, IS1, CTR1, CS1</td>
+          <td>
+            RR = 01, P = 1, T = 1
+          </td>
+          <td>-------- 0111----</td>
+        </tr>
+        <tr>
+          <td>RSET2</td>
+          <td>Select register set 2 = R2, PTR0, OFS0, IX0, IS0, CTR0, CS0</td>
+          <td>
+            RR = 10, P = 0, T = 0
+          </td>
+          <td>-------- 1000----</td>
+        </tr>
+        <tr>
+          <td>RSET3</td>
+          <td>Select register set 3 = R3, PTR1, OFS1, IX1, IS1, CTR1, CS1</td>
+          <td>
+            RR = 11, P = 1, T = 1
+          </td>
+          <td>-------- 1111----</td>
         </tr>
       </tbody>
     </table>
@@ -1644,8 +1775,8 @@ SUM:
     
     <h2>Opcodes</h2>
     <ul>
-      <li>All unused opcodes in columns 0 thru B are reserved for future use.</li>
-      <li>All opcodes in columns C thru F are available for implementation use.</li>
+      <li>All unused opcodes in rows 0 thru D are reserved for future use.</li>
+      <li>All opcodes in rows E and F are available for implementation use.</li>
       <li>Opcodes cannot be user defined.</li>
     </ul>
     <p>Legend</p>
@@ -1672,28 +1803,32 @@ SUM:
           <td class="ins0-branch"></td>
         </tr>
         <tr>
+          <td>Meta</td>
+          <td><span class="count-ins0-meta"></span></td>
+          <td class="ins0-meta"></td>
+
           <td>Move and swap</td>
           <td><span class="count-ins0-move"></span></td>
           <td class="ins0-move"></td>
-          
+        </tr>          
           <td>Other</td>
           <td><span class="count-ins0-other"></span></td>
           <td class="ins0-other"></td>
-        </tr>
-        <tr>
+
           <td>Pointer</td>
           <td><span class="count-ins0-float"></span></td>
-          <td class="ins0-float"></td>          
-          
+          <td class="ins0-float"></td>
+        </tr>
+        <tr>
           <td>Stack</td>
           <td><span class="count-ins0-stack"></span></td>
           <td class="ins0-stack"></td>
-        </tr>
-        <tr>                    
+                              
           <td>Status</td>
           <td><span class="count-ins0-status"></span></td>
           <td class="ins0-status"></td>
-          
+        </tr>
+        <tr>
           <td>Unary</td>
           <td><span class="count-ins0-unary"></span></td>
           <td class="ins0-unary"></td>
@@ -1739,76 +1874,51 @@ SUM:
           <td class="ins0-binary">MUL R,*PTR</td>
           <td class="ins0-binary">OR R,Rc</td>
           <td class="ins0-binary">OR R,*PTR</td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          
-        </tr>
-        <tr>
-          <th>1</th>
           <td class="ins0-binary">SHA R,Rc</td>
           <td class="ins0-binary">SHA R,U8</td>
           <td class="ins0-binary">SHL R,Rc</td>
           <td class="ins0-binary">SHL R,U8</td>
+        </tr>
+        <tr>
+          <th>1</th>
           <td class="ins0-binary">SHR R,Rc</td>
           <td class="ins0-binary">SHR R,U8</td>
           <td class="ins0-binary">SUB R,Rc</td>
           <td class="ins0-binary">SUB R,*PTR</td>
-          <td class="ins0-binary">TCLR R,Rc</td>
-          <td class="ins0-binary">TCLR R,*PTR</td>
-          <td class="ins0-binary">TSET R,Rc</td>
-          <td class="ins0-binary">TSET R,*PTR</td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-
-        </tr>
-        <tr>
-          <th>2</th>
           <td class="ins0-binary">XOR R,Rc</td>
           <td class="ins0-binary">XOR R,*PTR</td>
           <td class="ins0-branch">BCC S8</td>
           <td class="ins0-branch">BCS S8</td>
-          <td class="ins0-branch">BEQ S8</td>
-          <td class="ins0-branch">BMI S8</td>
-          <td class="ins0-branch">BNE S8</td>
-          <td class="ins0-branch">BPL S8</td>
           <td class="ins0-branch">BVC S8</td>
           <td class="ins0-branch">BVS S8</td>
+          <td class="ins0-branch">BEQ S8</td>
+          <td class="ins0-branch">BNE S8</td>
+          <td class="ins0-branch">BMI S8</td>
+          <td class="ins0-branch">BPL S8</td>
           <td class="ins0-branch">JMA R</td>
           <td class="ins0-branch">JMA U32</td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
         </tr>
         <tr>
-          <th>3</th>
+          <th>2</th>
           <td class="ins0-branch">JMP R</td>
           <td class="ins0-branch">JMP S16</td>
           <td class="ins0-branch">JSA R</td>
           <td class="ins0-branch">JSA U32</td>
           <td class="ins0-branch">JSR R</td>
           <td class="ins0-branch">JSR S16</td>
-          <td class="ins0-branch">RTI</td>
           <td class="ins0-branch">RTS</td>
           <td class="ins0-branch">RTS U8</td>
+          <td class="ins0-branch">RTI</td>
           <td class="ins0-float">F2SF</td>
           <td class="ins0-float">FABS</td>
           <td class="ins0-float">FACS</td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-        </tr>
-        <tr>
-          <th>4</th>
           <td class="ins0-float">FASN</td>
           <td class="ins0-float">FATN</td>
           <td class="ins0-float">FCEL</td>
           <td class="ins0-float">FCOS</td>
+        </tr>
+        <tr>
+          <th>3</th>
           <td class="ins0-float">FF2S</td>
           <td class="ins0-float">FF2U</td>
           <td class="ins0-float">FFLR</td>
@@ -1817,70 +1927,83 @@ SUM:
           <td class="ins0-float">FPOW</td>
           <td class="ins0-float">FSIN</td>
           <td class="ins0-float">FSQR</td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
+          <td class="ins0-float">FTAN</td>
+          <td class="ins0-float">FU2F</td>
+          <td class="ins0-move">LD R,O</td>
+          <td class="ins0-move">LD PTR,U32</td>
+          <td class="ins0-move">LD OFS,U16</td>
+          <td class="ins0-move">LD IX,U16</td>
+          <td class="ins0-move">LD IS,S16</td>
+          <td class="ins0-move">LD CTR,U32</td>
+        </tr>
+        <tr>
+          <th>4</th>
+          <td class="ins0-move">LD CS,U16</td>
+          <td class="ins0-move">LD DP,U32</td>
+          <td class="ins0-move">LD SB,U32</td>
+          <td class="ins0-move">LD SP,U32</td>
+          <td class="ins0-move">RD R,Rc</td>
+          <td class="ins0-move">RD R,PTR</td>
+          <td class="ins0-move">RD R,*PTR</td>
+          <td class="ins0-move">RD R,OFS</td>
+          <td class="ins0-move">RD R,IX</td>
+          <td class="ins0-move">RD R,IS</td>
+          <td class="ins0-move">RD R,CTR</td>
+          <td class="ins0-move">RD R,CS</td>
+          <td class="ins0-move">RD R,DP</td>
+          <td class="ins0-move">RD R,ST</td>
+          <td class="ins0-move">RD R,SB</td>
+          <td class="ins0-move">RD R,SP</td>
         </tr>
         <tr>
           <th>5</th>
-          <td class="ins0-float">FTAN</td>
-          <td class="ins0-float">FU2F</td>
-          <td class="ins0-move">MOV R,PTR</td>
-          <td class="ins0-move">MOV PTR,R</td>
-          <td class="ins0-move">MOV R,*PTR</td>
-          <td class="ins0-move">MOV *PTR,R</td>
-          <td class="ins0-move">MOV R,*SP[U8]</td>
-          <td class="ins0-move">MOV *SP[U8],R</td>
-          <td class="ins0-move">MOV R,O</td>
-          <td class="ins0-move">SWP R,Rc</td>
-          <td class="ins0-move">SWP R,PTR</td>
-          <td class="ins0-move">SWP R,*PTR</td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
+          <td class="ins0-move">RD R,*SP[U8]</td>
+          <td class="ins0-move">RD R,M</td>
+          <td class="ins0-move">WD R,Rc</td>
+          <td class="ins0-move">WD R,PTR</td>
+          <td class="ins0-move">WD R,*PTR</td>
+          <td class="ins0-move">WD R,OFS</td>
+          <td class="ins0-move">WD R,IX</td>
+          <td class="ins0-move">WD R,IS</td>
+          <td class="ins0-move">WD R,CTR</td>
+          <td class="ins0-move">WD R,CS</td>
+          <td class="ins0-move">WD R,DP</td>
+          <td class="ins0-move">WD R,ST</td>
+          <td class="ins0-move">WD R,SB</td>
+          <td class="ins0-move">WD R,SP</td>
+          <td class="ins0-move">WD R,*SP[U8]</td>
+          <td class="ins0-move">WD R,M</td>
         </tr>
         <tr>
           <th>6</th>
+          <td class="ins0-move">SWP R,Rc</td>
+          <td class="ins0-move">SWP R,PTR</td>
+          <td class="ins0-move">SWP R,*PTR</td>
           <td class="ins0-move">SWP R,OFS</td>
           <td class="ins0-move">SWP R,IX</td>
           <td class="ins0-move">SWP R,IS</td>
           <td class="ins0-move">SWP R,CTR</td>
           <td class="ins0-move">SWP R,CS</td>
-          <td class="ins0-move">SWP R,ST</td>
-          <td class="ins0-move">SWP R,SB</td>
           <td class="ins0-move">SWP R,*SP[U8]</td>
           <td class="ins0-move">SWP R,M</td>
           <td class="ins0-other">NOP</td>
           <td class="ins0-stack">PSH R0</td>
           <td class="ins0-stack">PSH R1</td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-        </tr>
-        <tr>
-          <th>7</th>
           <td class="ins0-stack">PSH R2</td>
           <td class="ins0-stack">PSH R3</td>
           <td class="ins0-stack">PSH PTR0</td>
+        </tr>
+        <tr>
+          <th>7</th>
           <td class="ins0-stack">PSH OFS0</td>
           <td class="ins0-stack">PSH IX0</td>
           <td class="ins0-stack">PSH IS0</td>
+          <td class="ins0-stack">PSH CTR0</td>
+          <td class="ins0-stack">PSH CS0</td>
           <td class="ins0-stack">PSH PTR1</td>
           <td class="ins0-stack">PSH OFS1</td>
           <td class="ins0-stack">PSH IX1</td>
           <td class="ins0-stack">PSH IS1</td>
-          <td class="ins0-stack">PSH CTR0</td>
-          <td class="ins0-stack">PSH CS0</td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-        </tr>
-        <tr>
-          <th>8</th>
           <td class="ins0-stack">PSH CTR1</td>
           <td class="ins0-stack">PSH CS1</td>
           <td class="ins0-stack">PSH ST</td>
@@ -1888,94 +2011,72 @@ SUM:
           <td class="ins0-stack">PUL R1</td>
           <td class="ins0-stack">PUL R2</td>
           <td class="ins0-stack">PUL R3</td>
+        </tr>
+        <tr>
+          <th>8</th>
           <td class="ins0-stack">PUL PTR0</td>
           <td class="ins0-stack">PUL OFS0</td>
           <td class="ins0-stack">PUL IX0</td>
           <td class="ins0-stack">PUL IS0</td>
+          <td class="ins0-stack">PUL CTR0</td>
+          <td class="ins0-stack">PUL CS0</td>
           <td class="ins0-stack">PUL PTR1</td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-        </tr>
-        <tr>
-          <th>9</th>
           <td class="ins0-stack">PUL OFS1</td>
           <td class="ins0-stack">PUL IX1</td>
           <td class="ins0-stack">PUL IS1</td>
-          <td class="ins0-stack">PUL CTR0</td>
-          <td class="ins0-stack">PUL CS0</td>
           <td class="ins0-stack">PUL CTR1</td>
           <td class="ins0-stack">PUL CS1</td>
           <td class="ins0-stack">PUL ST</td>
           <td class="ins0-stack">SSP U8</td>
           <td class="ins0-status">CLC</td>
+          <td class="ins0-status">SEC</td>
+        </tr>
+        <tr>
+          <th>9</th>
+          <td class="ins0-status">SAM0</td>
+          <td class="ins0-status">SAM1</td>
+          <td class="ins0-status">SAM2</td>
+          <td class="ins0-status">SAM3</td>
+          <td class="ins0-status">SAM4</td>
+          <td class="ins0-status">SAM5</td>
+          <td class="ins0-status">SAM6</td>
+          <td class="ins0-status">SAM7</td>
           <td class="ins0-status">CLI</td>
-          <td class="ins0-status">SEA0</td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
+          <td class="ins0-status">SEI</td>
+          <td class="ins0-status">SR0</td>
+          <td class="ins0-status">SR1</td>
+          <td class="ins0-status">SR2</td>
+          <td class="ins0-status">SR3</td>
+          <td class="ins0-status">SPS0</td>
+          <td class="ins0-status">SPS1</td>
         </tr>
         <tr>
           <th>A</th>
-          <td class="ins0-status">SEA1</td>
-          <td class="ins0-status">SEA2</td>
-          <td class="ins0-status">SEA3</td>
-          <td class="ins0-status">SEA4</td>
-          <td class="ins0-status">SEA5</td>
-          <td class="ins0-status">SEA6</td>
-          <td class="ins0-status">SEA7</td>
-          <td class="ins0-status">SEC</td>
-          <td class="ins0-status">SEI</td>
-          <td class="ins0-status">SEM0</td>
-          <td class="ins0-status">SEM1</td>
-          <td class="ins0-status">SEM2</td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-        </tr>
-        <tr>
-          <th>B</th>
-          <td class="ins0-status">SEM3</td>
-          <td class="ins0-status">SEO0</td>
-          <td class="ins0-status">SEO1</td>
-          <td class="ins0-status">SEO2</td>
-          <td class="ins0-status">SEO3</td>
-          <td class="ins0-status">SEPS0</td>
-          <td class="ins0-status">SEPS1</td>
-          <td class="ins0-status">SER0</td>
-          <td class="ins0-status">SER1</td>
-          <td class="ins0-status">SER2</td>
-          <td class="ins0-status">SER3</td>
-          <td class="ins0-status">SET0</td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-        </tr>
-        <tr>
-          <th>C</th>
-          <td class="ins0-status">SET1</td>
+          <td class="ins0-status">SCS0</td>
+          <td class="ins0-status">SCS1</td>
+          <td class="ins0-status">SOS0</td>
+          <td class="ins0-status">SOS1</td>
+          <td class="ins0-status">SOS2</td>
+          <td class="ins0-status">SOS3</td>
+          <td class="ins0-status">SMM0</td>
+          <td class="ins0-status">SMM1</td>
+          <td class="ins0-status">SMM2</td>
+          <td class="ins0-status">SMM3</td>
           <td class="ins0-unary">DEC R</td>
           <td class="ins0-unary">DEC *PTR</td>
           <td class="ins0-unary">INC R</td>
           <td class="ins0-unary">INC *PTR</td>
           <td class="ins0-unary">NEG R</td>
           <td class="ins0-unary">NEG *PTR</td>
+        </tr>
+        <tr>
+          <th>B</th>
           <td class="ins0-unary">NG1 R</td>
           <td class="ins0-unary">NG1 *PTR</td>
           <td class="ins0-unary">NG1 IS</td>
           <td class="ins0-unary">NOT R</td>
           <td class="ins0-unary">NOT *PTR</td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-        </tr>
-        <tr>
-          <th>D</th>
+          <td class="ins0-unary">NXT OFS</td>
           <td class="ins0-unary">NXT IX</td>
           <td class="ins0-unary">NXT CTR</td>
           <td class="ins0-unary">ONE R</td>
@@ -1985,7 +2086,39 @@ SUM:
           <td class="ins0-unary">SHLC R</td>
           <td class="ins0-unary">SHRC R</td>
           <td class="ins0-unary">ZRO R</td>
+          <td class="ins0-unary">ZRO OFS</td>
+        </tr>
+        <tr>
+          <th>C</th>
           <td class="ins0-unary">ZRO IX</td>
+          <td class="ins0-meta">LOOP CTR</td>
+          <td class="ins0-meta">LOOP CTR,IS</td>
+          <td class="ins0-meta">RSET0</td>
+          <td class="ins0-meta">RSET1</td>
+          <td class="ins0-meta">RSET2</td>
+          <td class="ins0-meta">RSET3</td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+        </tr>
+        <tr>
+          <th>D</th>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
