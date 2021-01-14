@@ -1,5 +1,12 @@
 package register
 
+// GeneralRegisterError represents an error performing operations on general registers
+type GeneralRegisterError string
+
+func (e GeneralRegisterError) Error() string {
+	return string(e)
+}
+
 const (
 	// SignBit8 is the sign bit for an 8 bit value
 	SignBit8 uint64 = 0x0000000000000080
@@ -13,14 +20,14 @@ const (
 	// SignBit64 is the sign bit for a 64 bit value
 	SignBit64 uint64 = 0x8000000000000000
 
-	// SignBitExtend8 is the bit pattern to sign extend an 8 bit value
-	SignBitExtend8 uint64 = 0xFFFFFFFFFFFFFF80
+	// SignExtend8 is the bit pattern to sign extend an 8 bit value
+	SignExtend8 uint64 = 0xFFFFFFFFFFFFFF80
 
-	// SignBitExtend16 is the bit pattern to sign extend a 16 bit value
-	SignBitExtend16 uint64 = 0xFFFFFFFFFFFF8000
+	// SignExtend16 is the bit pattern to sign extend a 16 bit value
+	SignExtend16 uint64 = 0xFFFFFFFFFFFF8000
 
-	// SignBitExtend32 is the bit pattern to sign extend a 32 bit value
-	SignBitExtend32 uint64 = 0xFFFFFFFF80000000
+	// SignExtend32 is the bit pattern to sign extend a 32 bit value
+	SignExtend32 uint64 = 0xFFFFFFFF80000000
 
 	// MaxUint8 is largest 8 bit unsigned value within a uint64, and a mask for only lowest 8 bits
 	MaxUint8 uint64 = 0x00000000000000FF
@@ -33,16 +40,14 @@ const (
 
 	// MaxUint64 is largest 64 bit unsiged value
 	MaxUint64 uint64 = 0xFFFFFFFFFFFFFFFF
+
+	// ErrDivisionByZero is returned by Divide method if the denomoinator is zero
+	ErrDivisionByZero = GeneralRegisterError("Division By Zero")
 )
 
 // GeneralRegister defines a general register
 // Can operate as a signed or unsigned 8, 16, 32, or 64 bit value.
 type GeneralRegister uint64
-
-// Negative returns true if the register is negative
-func (r GeneralRegister) Negative() bool {
-	return (uint64(r) & SignBit64) == SignBit64
-}
 
 // Uint8 returns register value as a uint8
 func (r GeneralRegister) Uint8() uint8 {
@@ -89,7 +94,7 @@ func (r GeneralRegister) Int64() int64 {
 func (r *GeneralRegister) SetUint8(val uint8) {
 	val64 := uint64(val)
 	if (val64 & SignBit8) == SignBit8 {
-		*r = GeneralRegister(SignBitExtend8 | val64)
+		*r = GeneralRegister(SignExtend8 | val64)
 	} else {
 		*r = GeneralRegister(val64)
 	}
@@ -99,7 +104,7 @@ func (r *GeneralRegister) SetUint8(val uint8) {
 func (r *GeneralRegister) SetUint16(val uint16) {
 	val64 := uint64(val)
 	if (val64 & SignBit16) == SignBit16 {
-		*r = GeneralRegister(SignBitExtend16 | val64)
+		*r = GeneralRegister(SignExtend16 | val64)
 	} else {
 		*r = GeneralRegister(val64)
 	}
@@ -109,7 +114,7 @@ func (r *GeneralRegister) SetUint16(val uint16) {
 func (r *GeneralRegister) SetUint32(val uint32) {
 	val64 := uint64(val)
 	if (val64 & SignBit32) == SignBit32 {
-		*r = GeneralRegister(SignBitExtend32 | val64)
+		*r = GeneralRegister(SignExtend32 | val64)
 	} else {
 		*r = GeneralRegister(val64)
 	}
@@ -140,20 +145,105 @@ func (r *GeneralRegister) SetInt64(val int64) {
 	*r = GeneralRegister(val)
 }
 
-// extendSign extends the sign of the vregister, considering the current operand size
-func (r *GeneralRegister) extendSign(st StatusRegister) {
-
+// Negative returns true if the register is negative
+func (r GeneralRegister) Negative() bool {
+	return (uint64(r) & SignBit64) == SignBit64
 }
 
-// AddInteger sets r = r + r2 + Carry using integer math, with the following side :
-// Carry is true if unsigned result > max unsigned value of current operand size
-// Overflow is true if signed result > max signed positive value of current operand size
+// ExtendSign extends the sign of the vregister, considering the current operand size
+func (r *GeneralRegister) ExtendSign(st StatusRegister) {
+	val := uint64(*r)
+	switch st.OperandSize() {
+	case STOperand8:
+		if (val & SignBit8) == SignBit8 {
+			*r = GeneralRegister(val | SignExtend8)
+		} else {
+			*r = GeneralRegister(val & MaxUint8)
+		}
+
+	case STOperand16:
+		if (val & SignBit16) == SignBit16 {
+			*r = GeneralRegister(val | SignExtend16)
+		} else {
+			*r = GeneralRegister(val & MaxUint16)
+		}
+
+	case STOperand32:
+		if (val & SignBit32) == SignBit32 {
+			*r = GeneralRegister(val | SignExtend32)
+		} else {
+			*r = GeneralRegister(val & MaxUint32)
+		}
+	}
+}
+
+// AddInteger sets r = r + op + Carry using integer math, with the following side effects:
+// Result is sign extended
+// Carry is true if unsigned result < original value
+// Overflow is true if the two operands are the same sign and the result is the opposite sign
 // Zero is true if result is zero
 // Negative is true if result is negative
-// Result is sign extended if operand size < 64 bits
-func (r *GeneralRegister) AddInteger(r2 GeneralRegister, st *StatusRegister) {
-	*r += r2
+func (r *GeneralRegister) AddInteger(op GeneralRegister, st *StatusRegister) {
+	oldVal := *r
+	oldNeg := oldVal.Negative()
+
+	*r += op
 	if st.IsCarry() {
 		*r++
 	}
+
+	r.ExtendSign(*st)
+	newNeg := r.Negative()
+
+	st.Carry(*r < oldVal)
+	st.Overflow((oldNeg == op.Negative()) && (oldNeg != newNeg))
+	st.Zero(*r == 0)
+	st.Negative(newNeg)
+}
+
+// And r and op, with the following side effects:
+// Result is sign extended
+// Zero is true if result is zero
+// Negative is true if result is negative
+func (r *GeneralRegister) And(op GeneralRegister, st *StatusRegister) {
+	*r &= op
+
+	r.ExtendSign(*st)
+
+	st.Zero(*r == 0)
+	st.Negative(r.Negative())
+}
+
+// Compare r with op, with the following side effects:
+// Carry is true if r >= op unsigned
+// Overflow is true if r >= op signed
+// Zero is true if r == op
+func (r *GeneralRegister) Compare(op GeneralRegister, st *StatusRegister) {
+	// Unsigned >= is simple
+	st.Carry(*r >= op)
+
+	// Signed >= is trickier (using 8 bit examples):
+	// 2 > 1
+	// 1 < 255, but 255 is -1, so 1 > 255
+	// 127 < 128, but 128 is -128, so 127 > 128
+	// r > op if:
+	// a) r + and op -
+	// b) r and op are same sign and r > op
+	rNeg := r.Negative()
+	opNeg := op.Negative()
+	st.Overflow((!rNeg && opNeg) || ((rNeg == opNeg) && (*r >= op)))
+
+	// Unsigned and signed == is simple
+	st.Zero(*r == op)
+}
+
+// DivideInteger sets r = r / op and op = r % op using integer math, with the following side effects:
+// Results in r and op are sign extended
+// Returns ErrDivisionByZero if op = 0
+func (r *GeneralRegister) DivideInteger(op *GeneralRegister, st *StatusRegister) error {
+	if uint64(*op) == 0 {
+		return ErrDivisionByZero
+	}
+
+	return nil
 }

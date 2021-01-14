@@ -74,6 +74,18 @@ const (
 	// STOperandShift is the ST shift for operand
 	STOperandShift int = 18
 
+	// STOperand8 is ST operand size value for 8 bits
+	STOperand8 uint8 = 0
+
+	// STOperand16 is ST operand size value for 16 bits
+	STOperand16 uint8 = 1
+
+	// STOperand32 is ST operand size value for 32 bits
+	STOperand32 uint8 = 2
+
+	// STOperand64 is ST operand size value for 64 bits
+	STOperand64 uint8 = 3
+
 	// STMathRead is ST filter for reading math mode
 	STMathRead uint32 = 0x00030000
 
