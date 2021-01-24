@@ -1,5 +1,9 @@
 package register
 
+import (
+	"math/big"
+)
+
 // GeneralRegisterError represents an error performing operations on general registers
 type GeneralRegisterError string
 
@@ -150,7 +154,7 @@ func (r GeneralRegister) Negative() bool {
 	return (uint64(r) & SignBit64) == SignBit64
 }
 
-// ExtendSign extends the sign of the vregister, considering the current operand size
+// ExtendSign extends the sign of the register, considering the current operand size
 func (r *GeneralRegister) ExtendSign(st StatusRegister) {
 	val := uint64(*r)
 	switch st.OperandSize() {
@@ -237,13 +241,113 @@ func (r *GeneralRegister) Compare(op GeneralRegister, st *StatusRegister) {
 	st.Zero(*r == op)
 }
 
-// DivideInteger sets r = r / op and op = r % op using integer math, with the following side effects:
-// Results in r and op are sign extended
+// DivideIntegerSigned sets r = r / op and op = r % op using signed integer math, with the following side effects:
+// Negative is true if the quotient is negative
+// Overflow is true if the remainder is negative
+//
 // Returns ErrDivisionByZero if op = 0
-func (r *GeneralRegister) DivideInteger(op *GeneralRegister, st *StatusRegister) error {
+func (r *GeneralRegister) DivideIntegerSigned(op *GeneralRegister, st *StatusRegister) error {
 	if uint64(*op) == 0 {
 		return ErrDivisionByZero
 	}
 
+	var (
+		dividend  = r.Int64()
+		divisor   = op.Int64()
+		quotient  = dividend / divisor
+		remainder = dividend % divisor
+	)
+
+	// Don't need to extend sign as we used int64
+	*r = GeneralRegister(quotient)
+	*op = GeneralRegister(remainder)
+
+	st.Negative(r.Negative())
+	st.Overflow(op.Negative())
+
 	return nil
+}
+
+// MultiplyIntegerSigned sets r = r * op, with the following side effects:
+// Zero is true if the result is zero
+// Negative is true if the result is negative
+//
+// If the operand size is 64 bits, r contains the lower 64 bits of the result,
+// and op contains the upper 64 bits. Otherwise, only r contains the complete result.
+func (r *GeneralRegister) MultiplyIntegerSigned(op *GeneralRegister, st *StatusRegister) {
+	var (
+		rVal  = r.Int64()
+		opVal = op.Int64()
+	)
+
+	// If operand size is at most 32 bits, the result fits in 64 bits
+	// Only r is affected
+	if st.OperandSize() <= STOperand32 {
+		r.SetInt64(rVal * opVal)
+		st.Zero(*r == 0)
+		st.Negative(r.Negative())
+	} else {
+		// Otherwise, the result may not fit into 64 bits
+		// Both r and op are affected
+		// r is lower 64 bits, op is upper 64 bits
+		var (
+			rInt  = big.NewInt(rVal)
+			opInt = big.NewInt(opVal)
+		)
+
+		rInt.Mul(rInt, opInt)
+
+		if rInt.IsInt64() {
+			// Turns out result does fit into int64
+			int64Val := rInt.Int64()
+
+			r.SetInt64(int64Val)
+			op.SetInt64(0)
+
+			isNeg := int64Val < 0
+			if isNeg {
+				op.SetInt64(-1)
+			}
+
+			st.Negative(isNeg)
+			st.Zero(int64Val == 0)
+		} else {
+			// Result is at least 65 bits
+			// Get absolute value bytes in order from most to least significant (little endian), contrary to docs
+			bytes := rInt.Bytes()
+
+			var (
+				lastIndex = len(bytes) - 1
+				low64Val  = uint64(bytes[lastIndex])
+			)
+
+			// Grab last 8 bytes into r
+			for i := 1; i <= 7; i++ {
+				low64Val = (low64Val << 8) + uint64(bytes[lastIndex-i])
+			}
+
+			// Grab remaining bytes into op (can't be more than 8 remaining)
+			high64Val := uint64(bytes[lastIndex-8])
+			for i := 9; lastIndex-i >= 0; i++ {
+				high64Val = (high64Val << 8) + uint64(bytes[lastIndex-i])
+			}
+
+			// Check the sign and adjust if negative
+			if rInt.Sign() < 0 {
+				// Flip bits,using XOR (go has no logical NOT operator)
+				low64Val ^= MaxUint64
+				high64Val ^= MaxUint64
+
+				// Increment lower64 bits.
+				// If the result is 0, it wrapped around, increment upper 64 bits.
+				low64Val++
+				if low64Val == 0 {
+					high64Val++
+				}
+			}
+
+			*r = GeneralRegister(low64Val)
+			*op = GeneralRegister(high64Val)
+		}
+	}
 }

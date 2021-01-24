@@ -399,3 +399,182 @@ func TestGeneralRegisterCompare(t *testing.T) {
 	assert.False(t, st.IsOverflow())
 	assert.False(t, st.IsZero())
 }
+
+func TestGeneralRegisterDivideInteger(t *testing.T) {
+	var (
+		r0  = new(GeneralRegister)
+		r1  = new(GeneralRegister)
+		st  = new(StatusRegister)
+		err error
+	)
+
+	// 7 / 2 = 3 r 1
+	r0.SetUint8(0x07)
+	r1.SetUint8(0x02)
+	st.ClearNegative()
+	st.ClearOverflow()
+	err = r0.DivideIntegerSigned(r1, st)
+
+	assert.Nil(t, err)
+	assert.Equal(t, uint64(0x0000000000000003), r0.Uint64())
+	assert.Equal(t, uint64(0x0000000000000001), r1.Uint64())
+	assert.False(t, st.IsNegative())
+	assert.False(t, st.IsOverflow())
+
+	// -7 / 2 = -3 r -1
+	r0.SetUint8(0xF9)
+	r1.SetUint8(0x02)
+	st.ClearNegative()
+	st.ClearOverflow()
+	err = r0.DivideIntegerSigned(r1, st)
+
+	assert.Nil(t, err)
+	assert.Equal(t, uint64(0xFFFFFFFFFFFFFFFD), r0.Uint64())
+	assert.Equal(t, uint64(0xFFFFFFFFFFFFFFFF), r1.Uint64())
+	assert.True(t, st.IsNegative())
+	assert.True(t, st.IsOverflow())
+
+	// 7 / -2 = -3 r 1
+	r0.SetUint8(0x07)
+	r1.SetUint8(0xFE)
+	st.ClearNegative()
+	st.ClearOverflow()
+	err = r0.DivideIntegerSigned(r1, st)
+
+	assert.Nil(t, err)
+	assert.Equal(t, uint64(0xFFFFFFFFFFFFFFFD), r0.Uint64())
+	assert.Equal(t, uint64(0x0000000000000001), r1.Uint64())
+	assert.True(t, st.IsNegative())
+	assert.False(t, st.IsOverflow())
+
+	// -7 / -2 = 3 r -1
+	r0.SetUint8(0xF9)
+	r1.SetUint8(0xFE)
+	st.ClearNegative()
+	st.ClearOverflow()
+	err = r0.DivideIntegerSigned(r1, st)
+
+	assert.Nil(t, err)
+	assert.Equal(t, uint64(0x0000000000000003), r0.Uint64())
+	assert.Equal(t, uint64(0xFFFFFFFFFFFFFFFF), r1.Uint64())
+	assert.False(t, st.IsNegative())
+	assert.True(t, st.IsOverflow())
+
+	// 7 / 0 = division by zero error
+	r0.SetUint8(0x07)
+	r1.SetUint8(0x00)
+	st.ClearNegative()
+	st.ClearOverflow()
+	err = r0.DivideIntegerSigned(r1, st)
+
+	assert.Equal(t, ErrDivisionByZero, err)
+	assert.Equal(t, uint64(0x0000000000000007), r0.Uint64())
+	assert.Equal(t, uint64(0x0000000000000000), r1.Uint64())
+	assert.False(t, st.IsNegative())
+	assert.False(t, st.IsOverflow())
+}
+
+func TestGeneralRegisterMultiplyInteger(t *testing.T) {
+	var (
+		r0 = new(GeneralRegister)
+		r1 = new(GeneralRegister)
+		st = new(StatusRegister)
+	)
+
+	// 7 * 0 = 0
+	r0.SetUint8(0x07)
+	r1.SetUint8(0x00)
+	st.SelectOperandSize(Operand8)
+	st.ClearZero()
+	st.SetNegative()
+	r0.MultiplyIntegerSigned(r1, st)
+
+	assert.Equal(t, uint64(0x0000000000000000), r0.Uint64())
+	assert.Equal(t, uint64(0x0000000000000000), r1.Uint64())
+	assert.True(t, st.IsZero())
+	assert.False(t, st.IsNegative())
+
+	// 7 * 2 = 14
+	r0.SetUint8(0x07)
+	r1.SetUint8(0x02)
+	st.SelectOperandSize(Operand8)
+	st.SetZero()
+	st.SetNegative()
+	r0.MultiplyIntegerSigned(r1, st)
+
+	assert.Equal(t, uint64(0x000000000000000E), r0.Uint64())
+	assert.Equal(t, uint64(0x0000000000000002), r1.Uint64())
+	assert.False(t, st.IsZero())
+	assert.False(t, st.IsNegative())
+
+	// -7 * 2 = -14
+	r0.SetUint8(0xF9)
+	r1.SetUint8(0x02)
+	st.SelectOperandSize(Operand8)
+	st.SetZero()
+	st.ClearNegative()
+	r0.MultiplyIntegerSigned(r1, st)
+
+	assert.Equal(t, uint64(0xFFFFFFFFFFFFFFF2), r0.Uint64())
+	assert.Equal(t, uint64(0x0000000000000002), r1.Uint64())
+	assert.False(t, st.IsZero())
+	assert.True(t, st.IsNegative())
+
+	// 7 * -2 = -14
+	r0.SetUint8(0x07)
+	r1.SetUint8(0xFE)
+	st.SelectOperandSize(Operand8)
+	st.SetZero()
+	st.ClearNegative()
+	r0.MultiplyIntegerSigned(r1, st)
+
+	assert.Equal(t, uint64(0xFFFFFFFFFFFFFFF2), r0.Uint64())
+	assert.Equal(t, uint64(0xFFFFFFFFFFFFFFFE), r1.Uint64())
+	assert.False(t, st.IsZero())
+	assert.True(t, st.IsNegative())
+
+	// -7 * -2 = 14
+	r0.SetUint8(0xF9)
+	r1.SetUint8(0xFE)
+	st.SelectOperandSize(Operand8)
+	st.SetZero()
+	st.SetNegative()
+	r0.MultiplyIntegerSigned(r1, st)
+
+	assert.Equal(t, uint64(0x000000000000000E), r0.Uint64())
+	assert.Equal(t, uint64(0xFFFFFFFFFFFFFFFE), r1.Uint64())
+	assert.False(t, st.IsZero())
+	assert.False(t, st.IsNegative())
+
+	// (7 << 8) * (2 << 8) = 14 << 16
+	r0.SetUint64(0x0000000000000700)
+	r1.SetUint64(0x0000000000000200)
+	st.SelectOperandSize(Operand64)
+	st.SetZero()
+	st.SetNegative()
+	r0.MultiplyIntegerSigned(r1, st)
+
+	assert.Equal(t, uint64(0x00000000000E0000), r0.Uint64())
+	assert.Equal(t, uint64(0x0000000000000000), r1.Uint64())
+	assert.False(t, st.IsZero())
+	assert.False(t, st.IsNegative())
+
+	// (23 << 31) * (2 << 32) = 46 << 63
+	// 23 = 0001 0111 = 17 
+	// 46 = 0010 1110 = 2E
+	//            0000 | 0000 0000 0000 0000 0000 0000 0000 0000
+	// 23 << 31 = 1011 | 1000 0000 0000 0000 0000 0000 0000 0000 = B 80 00 00 00
+	//  2 << 32 = 0010 | 0000 0000 0000 0000 0000 0000 0000 0000 = 2 00 00 00 00
+	// 46 << 63 = 0010 1110 63 0s = 0101 1100 60 0s              = 
+	r0.SetUint64(0x00000005C0000000)
+	r1.SetUint64(0x0000000200000000)
+	st.SelectOperandSize(Operand64)
+	st.SetZero()
+	st.SetNegative()
+	r0.MultiplyIntegerSigned(r1, st)
+
+	assert.Equal(t, uint64(0x0000000000000000), r0.Uint64())
+	assert.Equal(t, uint64(0x0000000000000000), r1.Uint64())
+	assert.False(t, st.IsZero())
+	assert.False(t, st.IsNegative())
+}

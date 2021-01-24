@@ -859,12 +859,13 @@ SUM:
           <td>
             R' = R / Rc; Rc' = R mod Rc<br>
             R' = R / *PTR; Rc' = R mod *PTR<br>
-            C and V are only set in floating point mode<br>
+            N is sign of quotient and V is sign of remainder in integer mode<br>
+            C and V are set in floating point mode<br>
             If denominator is zero:<br>
             If math mode is floating point, result is +/- infinity,<br>
             else execute *FFFFFFFC interrupt with R0 = 3 (division by zero)
           </td>
-          <td>CVZN---- --------</td>
+          <td>-VZN---- --------</td>
         </tr>
         <tr>
           <td>MUL</td>
@@ -876,11 +877,10 @@ SUM:
             When OO = 11:<br>
             Rx, Ry = R * Rc<br>
             Rx, Ry = R * *PTR<br>
-            Rx is upper 64 bits, Ry is lower 64 bits<br>
-            C = 1 if (H(Or) = 1 or H(Ir) = 1) and (H(Or + Ir + C) = 0)<br>
+            Rx is lower 64 bits, Ry is upper 64 bits<br>
             V = 1 if (H(Or) = H(Ir)) and (H(Or) != H(Or + Ir + C))
           </td>
-          <td>CVZN---- --------</td>
+          <td>--ZN---- --------</td>
         </tr>
         <tr>
           <td>OR</td>
