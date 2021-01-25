@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 package register
 
 import (
@@ -560,12 +562,12 @@ func TestGeneralRegisterMultiplyInteger(t *testing.T) {
 	assert.False(t, st.IsNegative())
 
 	// (23 << 31) * (2 << 32) = 46 << 63
-	// 23 = 0001 0111 = 17 
+	// 23 = 0001 0111 = 17
 	// 46 = 0010 1110 = 2E
 	//            0000 | 0000 0000 0000 0000 0000 0000 0000 0000
 	// 23 << 31 = 1011 | 1000 0000 0000 0000 0000 0000 0000 0000 = B 80 00 00 00
 	//  2 << 32 = 0010 | 0000 0000 0000 0000 0000 0000 0000 0000 = 2 00 00 00 00
-	// 46 << 63 = 0010 1110 63 0s = 0101 1100 60 0s              = 
+	// 46 << 63 = 0010 1110 63 0s = 0101 1100 60 0s              =
 	r0.SetUint64(0x00000005C0000000)
 	r1.SetUint64(0x0000000200000000)
 	st.SelectOperandSize(Operand64)
