@@ -32,7 +32,7 @@ compile:
 lint:
 	go vet ./... || exit $$?; \
 	reviveConfigOpt=""; \
-	[ -f "$(reviveConfigFile)" ] && reviveConfigOpt="-config $(reviveConfigFile)"; \
+	[ -f "$(reviveConfigFile)" ] && reviveConfigOpt="-config `readlink -f $(reviveConfigFile)`"; \
 	reviveOut=""; \
 	for pkg in `go list -f '{{.Dir}}' ./...`; do \
 	  reviveOut="$$reviveOut`cd $$pkg; revive $$reviveConfigOpt $$(go list -f '{{.GoFiles}}' | tr -d '[]')`"; \
@@ -43,7 +43,7 @@ lint:
 	  *) exit 1;; \
 	esac; \
 	reviveTestConfigOpt=""; \
-	[ -f "$(reviveTestConfigFile)" ] && reviveTestConfigOpt="-config $(reviveTestConfigFile)"; \
+	[ -f "$(reviveTestConfigFile)" ] && reviveTestConfigOpt="-config `readlink -f $(reviveTestConfigFile)`"; \
 	reviveOut=""; \
 	for pkg in `go list -f '{{.Dir}}' ./...`; do \
 	  reviveOut="$$reviveOut`cd $$pkg; revive $$reviveTestConfigOpt $$(go list -f '{{.TestGoFiles}}' | tr -d '[]')`"; \
@@ -67,4 +67,4 @@ test:
 	[ -n "$(mod)" ] && modOpt="-mod=$(mod)"; \
 	testOpt="-count=$${count:-1}"; \
 	[ -n "$(run)" ] && testOpt="$$testOpt -run $(run)"; \
-	go test $$modOpt -v "$$testOpt" ./...
+	go test $$modOpt -v $$testOpt ./...
