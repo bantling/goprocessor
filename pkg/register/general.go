@@ -34,6 +34,15 @@ const (
 
 	// SignExtend32 is the bit pattern to sign extend a 32 bit value
 	SignExtend32 uint64 = 0xFFFFFFFF80000000
+	
+	// ZeroHigherBits8 is the bit pattern to zero out upper 56 bits
+	ZeroHigherBits8 uint64 = 0x00000000000000FF
+	
+	// ZeroHigherBits16 is the bit pattern to zero out upper 48 bits
+	ZeroHigherBits16 uint64 = 0x000000000000FFFF
+	
+	// ZeroHigherBits32 is the bit pattern to zero out upper 32 bits
+	ZeroHigherBits32 uint64 = 0x00000000FFFFFFFF
 
 	// MaxUint8 is largest 8 bit unsigned value within a uint64, and a mask for only lowest 8 bits
 	MaxUint8 uint64 = 0x00000000000000FF
@@ -41,18 +50,18 @@ const (
 	// MaxUint16 is largest 16 bit unsigned value within a uint64, and a mask for only lowest 16 bits
 	MaxUint16 uint64 = 0x000000000000FFFF
 
-	// MaxUint32 is largest 32 bit unsiged value within a uint64, and a mask for only lowest 32 bits
+	// MaxUint32 is largest 32 bit unsigned value within a uint64, and a mask for only lowest 32 bits
 	MaxUint32 uint64 = 0x00000000FFFFFFFF
 
-	// MaxUint64 is largest 64 bit unsiged value
+	// MaxUint64 is largest 64 bit unsigned value
 	MaxUint64 uint64 = 0xFFFFFFFFFFFFFFFF
 
-	// ErrDivisionByZero is returned by Divide method if the denomoinator is zero
+	// ErrDivisionByZero is returned by Divide method if the denominator is zero
 	ErrDivisionByZero = GeneralRegisterError("Division By Zero")
 )
 
 // GeneralRegister defines a general register
-// Can operate as a signed or unsigned 8, 16, 32, or 64 bit value.
+// Can operate as a signed or unsigned 8, 16, 32, or 64 bit value
 type GeneralRegister uint64
 
 // Uint8 returns register value as a uint8
@@ -96,7 +105,7 @@ func (r GeneralRegister) Int64() int64 {
 }
 
 // SetUint8 sets the register to the uint8 value.
-// The sign is extended by copying bit 7 to bits 8 thru 63
+// The sign is extended by copying bit 7 to bits 8 thru 63.
 func (r *GeneralRegister) SetUint8(val uint8) {
 	val64 := uint64(val)
 	if (val64 & SignBit8) == SignBit8 {
@@ -106,7 +115,8 @@ func (r *GeneralRegister) SetUint8(val uint8) {
 	}
 }
 
-// SetUint16 sets the register to the given uint16 value
+// SetUint16 sets the register to the given uint16 value.
+// The sign is extended by copying bit 15 to bits 16 thru 63.
 func (r *GeneralRegister) SetUint16(val uint16) {
 	val64 := uint64(val)
 	if (val64 & SignBit16) == SignBit16 {
@@ -116,7 +126,8 @@ func (r *GeneralRegister) SetUint16(val uint16) {
 	}
 }
 
-// SetUint32 sets the register to the given uint32 value
+// SetUint32 sets the register to the given uint32 value.
+// The sign is extended by copying bit 31 to bits 32 thru 63.
 func (r *GeneralRegister) SetUint32(val uint32) {
 	val64 := uint64(val)
 	if (val64 & SignBit32) == SignBit32 {
@@ -126,27 +137,32 @@ func (r *GeneralRegister) SetUint32(val uint32) {
 	}
 }
 
-// SetUint64 sets the register to the given uint64 value
+// SetUint64 sets the register to the given uint64 value.
+// The sign does not need to be extended.
 func (r *GeneralRegister) SetUint64(val uint64) {
 	*r = GeneralRegister(val)
 }
 
-// SetInt8 sets the register to the given int8 value
+// SetInt8 sets the register to the given int8 value.
+// The sign does not need to be extended.
 func (r *GeneralRegister) SetInt8(val int8) {
 	*r = GeneralRegister(val)
 }
 
-// SetInt16 sets the register to the given int16 value
+// SetInt16 sets the register to the given int16 value.
+// The sign does not need to be extended.
 func (r *GeneralRegister) SetInt16(val int16) {
 	*r = GeneralRegister(val)
 }
 
-// SetInt32 sets the register to the given int32 value
+// SetInt32 sets the register to the given int32 value.
+// The sign does not need to be extended.
 func (r *GeneralRegister) SetInt32(val int32) {
 	*r = GeneralRegister(val)
 }
 
-// SetInt64 sets the register to the given int64 value
+// SetInt64 sets the register to the given int64 value.
+// The sign does not need to be extended.
 func (r *GeneralRegister) SetInt64(val int64) {
 	*r = GeneralRegister(val)
 }
@@ -180,15 +196,33 @@ func (r *GeneralRegister) ExtendSign(st StatusRegister) {
 		} else {
 			*r = GeneralRegister(val & MaxUint32)
 		}
+	
+	// No need to do anything for 64 bit operands
+	}
+}
+
+// ZeroHigherBits zeroes our bits higher than the current operand size
+func (r *GeneralRegister) ZeroHigherBits(st StatusRegister) {
+	switch st.OperandSize() {
+	case STOperand8:
+    	*r &= GeneralRegister(ZeroHigherBits8)
+
+	case STOperand16:
+    	*r &= GeneralRegister(ZeroHigherBits16)
+
+	case STOperand32:
+    	*r &= GeneralRegister(ZeroHigherBits32)
+	
+	// No need to do anything for 64 bit operands
 	}
 }
 
 // AddInteger sets r = r + op + Carry using integer math, with the following side effects:
-// Result is sign extended
-// Carry is true if unsigned result < original value
-// Overflow is true if the two operands are the same sign and the result is the opposite sign
-// Zero is true if result is zero
-// Negative is true if result is negative
+// - Result is sign extended
+// - Carry is true if unsigned result < original value
+// - Overflow is true if the two operands are the same sign and the result is the opposite sign
+// - Zero is true if result is zero
+// - Negative is true if result is negative
 func (r *GeneralRegister) AddInteger(op GeneralRegister, st *StatusRegister) {
 	oldVal := *r
 	oldNeg := oldVal.Negative()
@@ -208,9 +242,9 @@ func (r *GeneralRegister) AddInteger(op GeneralRegister, st *StatusRegister) {
 }
 
 // And r and op, with the following side effects:
-// Result is sign extended
-// Zero is true if result is zero
-// Negative is true if result is negative
+// - Result is sign extended
+// - Zero is true if result is zero
+// - Negative is true if result is negative
 func (r *GeneralRegister) And(op GeneralRegister, st *StatusRegister) {
 	*r &= op
 
@@ -221,9 +255,9 @@ func (r *GeneralRegister) And(op GeneralRegister, st *StatusRegister) {
 }
 
 // Compare r with op, with the following side effects:
-// Carry is true if r >= op unsigned
-// Overflow is true if r >= op signed
-// Zero is true if r == op
+// - Carry is true if r >= op unsigned
+// - Overflow is true if r >= op signed
+// - Zero is true if r == op
 func (r *GeneralRegister) Compare(op GeneralRegister, st *StatusRegister) {
 	// Unsigned >= is simple
 	st.Carry(*r >= op)
@@ -244,8 +278,9 @@ func (r *GeneralRegister) Compare(op GeneralRegister, st *StatusRegister) {
 }
 
 // DivideIntegerSigned sets r = r / op and op = r % op using signed integer math, with the following side effects:
-// Negative is true if the quotient is negative
-// Overflow is true if the remainder is negative
+// - Zero is true if the result is zero
+// - Negative is true if the quotient is negative
+// - Overflow is true if the remainder is negative
 //
 // Returns ErrDivisionByZero if op = 0
 func (r *GeneralRegister) DivideIntegerSigned(op *GeneralRegister, st *StatusRegister) error {
@@ -264,6 +299,7 @@ func (r *GeneralRegister) DivideIntegerSigned(op *GeneralRegister, st *StatusReg
 	*r = GeneralRegister(quotient)
 	*op = GeneralRegister(remainder)
 
+    st.Zero(*r == 0)
 	st.Negative(r.Negative())
 	st.Overflow(op.Negative())
 
@@ -271,8 +307,9 @@ func (r *GeneralRegister) DivideIntegerSigned(op *GeneralRegister, st *StatusReg
 }
 
 // MultiplyIntegerSigned sets r = r * op, with the following side effects:
-// Zero is true if the result is zero
-// Negative is true if the result is negative
+// - Sign is extended
+// - Zero is true if the result is zero
+// - Negative is true if the result is negative
 //
 // If the operand size is 64 bits, r contains the lower 64 bits of the result,
 // and op contains the upper 64 bits. Otherwise, only r contains the complete result.
@@ -297,22 +334,24 @@ func (r *GeneralRegister) MultiplyIntegerSigned(op *GeneralRegister, st *StatusR
 			opInt = big.NewInt(opVal)
 		)
 
-		rInt.Mul(rInt, opInt)
+		rInt = rInt.Mul(rInt, opInt)
 
 		if rInt.IsInt64() {
 			// Turns out result does fit into int64
 			int64Val := rInt.Int64()
 
 			r.SetInt64(int64Val)
+			// Sign extend positive to upper 64
 			op.SetInt64(0)
 
 			isNeg := int64Val < 0
 			if isNeg {
+			    // Sign extend negative to upper 64
 				op.SetInt64(-1)
 			}
 
-			st.Negative(isNeg)
 			st.Zero(int64Val == 0)
+			st.Negative(isNeg)
 		} else {
 			// Result is at least 65 bits
 			// Get absolute value bytes in order from most to least significant (little endian), contrary to docs
@@ -350,6 +389,71 @@ func (r *GeneralRegister) MultiplyIntegerSigned(op *GeneralRegister, st *StatusR
 
 			*r = GeneralRegister(low64Val)
 			*op = GeneralRegister(high64Val)
+			st.Zero((*r == 0) && (*op == 0))
+			st.Negative(high64Val >= SignBit64)
 		}
 	}
+}
+
+// Or r and op, with the following side effects:
+// - Result is sign extended
+// - Zero is true if result is zero
+// - Negative is true if result is negative
+func (r *GeneralRegister) Or(op GeneralRegister, st *StatusRegister) {
+	*r |= op
+
+	r.ExtendSign(*st)
+
+	st.Zero(*r == 0)
+	st.Negative(r.Negative())
+}
+
+// Shift right arithmetic r and op, with the following side effects:
+// - Result is sign extended
+// - Zero is true if result is zero
+// - Negative is true if result is negative
+func (r *GeneralRegister) ShiftRightArithmetic(op GeneralRegister, st *StatusRegister) {
+    if (r.Negative()) {
+        // Go doesn't have arithmetic shift right, so manually shift, setting sign bit to 1 after each step
+        // As an optimization, if the number of shifts is >= 64, the result must be -1
+        numShift := uint64(op)
+        if (numShift >= 64) {
+            *r = GeneralRegister(MaxUint64) 
+        } else {
+            for ; numShift > 0; numShift-- {
+                *r >>= 1
+                *r |= GeneralRegister(SignBit64)
+            }
+        }
+    } else {
+        *r >>= op
+    }
+
+	st.Zero(*r == 0)
+	st.Negative(r.Negative())
+}
+
+// Shift left r and op, with the following side effects:
+// - Result is sign extended
+// - Zero is true if result is zero
+// - Negative is true if result is negative
+func (r *GeneralRegister) ShiftLeft(op GeneralRegister, st *StatusRegister) {
+    *r <<= op
+    r.ExtendSign(*st)
+
+	st.Zero(*r == 0)
+	st.Negative(r.Negative())
+}
+
+// Shift right r and op, with the following side effects:
+// - Result is sign extended
+// - Zero is true if result is zero
+// - Negative is true if result is negative
+func (r *GeneralRegister) ShiftRight(op GeneralRegister, st *StatusRegister) {
+    r.ZeroHigherBits(*st)
+    *r >>= op
+    r.ExtendSign(*st)
+
+	st.Zero(*r == 0)
+	st.Negative(r.Negative())
 }

@@ -561,14 +561,12 @@ func TestGeneralRegisterMultiplyInteger(t *testing.T) {
 	assert.False(t, st.IsZero())
 	assert.False(t, st.IsNegative())
 
-	// (23 << 31) * (2 << 32) = 46 << 63
+	// (23 << 31) * (2 << 32) = (23 << 31) * (1 << 33) = 23 << 64
 	// 23 = 0001 0111 = 17
-	// 46 = 0010 1110 = 2E
-	//            0000 | 0000 0000 0000 0000 0000 0000 0000 0000
-	// 23 << 31 = 1011 | 1000 0000 0000 0000 0000 0000 0000 0000 = B 80 00 00 00
-	//  2 << 32 = 0010 | 0000 0000 0000 0000 0000 0000 0000 0000 = 2 00 00 00 00
-	// 46 << 63 = 0010 1110 63 0s = 0101 1100 60 0s              =
-	r0.SetUint64(0x00000005C0000000)
+	// 23 << 31 = 1011 | 1000 0000 0000 0000 0000 0000 0000 0000 = 00 | 00 00 00 0B 80 00 00 00
+	//  1 << 33 = 0010 | 0000 0000 0000 0000 0000 0000 0000 0000 = 00 | 00 00 00 02 00 00 00 00
+	// 23 << 64 = 0001 0111 63 0s                                = 17 | 00 00 00 00 00 00 00 00
+	r0.SetUint64(0x0000000B80000000)
 	r1.SetUint64(0x0000000200000000)
 	st.SelectOperandSize(Operand64)
 	st.SetZero()
@@ -576,7 +574,202 @@ func TestGeneralRegisterMultiplyInteger(t *testing.T) {
 	r0.MultiplyIntegerSigned(r1, st)
 
 	assert.Equal(t, uint64(0x0000000000000000), r0.Uint64())
-	assert.Equal(t, uint64(0x0000000000000000), r1.Uint64())
+	assert.Equal(t, uint64(0x0000000000000017), r1.Uint64())
 	assert.False(t, st.IsZero())
+	assert.False(t, st.IsNegative())
+}
+
+func TestGeneralRegisterOr(t *testing.T) {
+	var (
+		st = new(StatusRegister)
+		r0 = new(GeneralRegister)
+		r1 = new(GeneralRegister)
+	)
+
+	// F0 | 0F
+	r0.SetUint8(0xF0)
+	r1.SetUint8(0x0F)
+	r0.Or(*r1, st)
+
+	assert.Equal(t, uint64(0xFFFFFFFFFFFFFFFF), r0.Uint64())
+	assert.False(t, st.IsZero())
+	assert.True(t, st.IsNegative())
+
+	// F0 | 1F
+	r0.SetUint8(0xF0)
+	r1.SetUint8(0x1F)
+	r0.Or(*r1, st)
+
+	assert.Equal(t, uint64(0xFFFFFFFFFFFFFFFF), r0.Uint64())
+	assert.False(t, st.IsZero())
+	assert.True(t, st.IsNegative())
+
+	// 79 | AA = 0111 1001 | 1010 1010 = 1111 1011 = FB
+	r0.SetUint8(0x79)
+	r1.SetUint8(0xAA)
+	r0.Or(*r1, st)
+
+	assert.Equal(t, uint64(0xFFFFFFFFFFFFFFFB), r0.Uint64())
+	assert.False(t, st.IsZero())
+	assert.True(t, st.IsNegative())
+
+	// 24 | 42 = 0010 0100 | 0100 0010 = 0110 0110 = 66  
+	r0.SetUint8(0x24)
+	r1.SetUint8(0x42)
+	r0.Or(*r1, st)
+
+	assert.Equal(t, uint64(0x66), r0.Uint64())
+	assert.False(t, st.IsZero())
+	assert.False(t, st.IsNegative())
+
+	// 99 | 88
+	r0.SetUint8(0x99)
+	r1.SetUint8(0x88)
+	r0.Or(*r1, st)
+
+	assert.Equal(t, uint64(0xFFFFFFFFFFFFFF99), r0.Uint64())
+	assert.False(t, st.IsZero())
+	assert.True(t, st.IsNegative())
+}
+
+func TestShiftRightArithmetic(t *testing.T) {
+	var (
+		st = new(StatusRegister)
+		r0 = new(GeneralRegister)
+		r1 = new(GeneralRegister)
+	)
+	
+	// 85 >>> 2 = 1000 0101 >>> 2 = 1110 0001 = E1 
+	r0.SetUint8(0x85)
+	r1.SetUint8(2)
+	r0.ShiftRightArithmetic(*r1, st)
+	
+	assert.Equal(t, uint64(0xFFFFFFFFFFFFFFE1), r0.Uint64())
+	assert.False(t, st.IsZero())
+	assert.True(t, st.IsNegative())
+	
+	// 7F >>> 3 = 0111 1111 >>> 3 = 0000 1111 = 0F 
+	r0.SetUint8(0x7F)
+	r1.SetUint8(3)
+	r0.ShiftRightArithmetic(*r1, st)
+	
+	assert.Equal(t, uint64(0x0F), r0.Uint64())
+	assert.False(t, st.IsZero())
+	assert.False(t, st.IsNegative())
+	
+	// 7F >>> 100 = 0
+	r0.SetUint8(0x7F)
+	r1.SetUint64(100)
+	r0.ShiftRightArithmetic(*r1, st);
+	
+	assert.Equal(t, uint64(0x00), r0.Uint64())
+	assert.True(t, st.IsZero())
+	assert.False(t, st.IsNegative())
+	
+	// F7 >>> 2 = 1111 0111 >>> 2 = 1111 1101 = FD
+	r0.SetUint8(0xF7)
+	r1.SetUint32(2)
+	r0.ShiftRightArithmetic(*r1, st);
+	
+	assert.Equal(t, uint64(0xFFFFFFFFFFFFFFFD), r0.Uint64())
+	assert.False(t, st.IsZero())
+	assert.True(t, st.IsNegative())
+	
+	// 85 >>> 1,000,000,000 = FF
+	r0.SetUint8(0x85)
+	r1.SetUint32(1000000000)
+	r0.ShiftRightArithmetic(*r1, st);
+	
+	assert.Equal(t, uint64(0xFFFFFFFFFFFFFFFF), r0.Uint64())
+	assert.False(t, st.IsZero())
+	assert.True(t, st.IsNegative())
+}
+
+func TestShiftLeft(t *testing.T) {
+	var (
+		st = new(StatusRegister)
+		r0 = new(GeneralRegister)
+		r1 = new(GeneralRegister)
+	)
+	
+	// 85 << 2 = 1000 0101 << 2 = 1110 0001 0100 = E14 = 14 in 8 bit mode
+	r0.SetUint8(0x85)
+	r1.SetUint8(2)
+	assert.Equal(t, uint64(0xFFFFFFFFFFFFFF85), r0.Uint64())
+	r0.ShiftLeft(*r1, st)
+	
+	assert.Equal(t, uint64(0x14), r0.Uint64())
+	assert.False(t, st.IsZero())
+	assert.False(t, st.IsNegative())
+	
+	// 7F << 3 = 0111 1111 << 3 = 0011 1111 1000 = 3F8 = F8 in 8 bit mode 
+	r0.SetUint8(0x7F)
+	r1.SetUint8(3)
+	r0.ShiftLeft(*r1, st)
+	
+	assert.Equal(t, uint64(0xFFFFFFFFFFFFFFF8), r0.Uint64())
+	assert.False(t, st.IsZero())
+	assert.True(t, st.IsNegative())
+	
+	// 7F << 100 = 0
+	r0.SetUint8(0x7F)
+	r1.SetUint64(100)
+	r0.ShiftLeft(*r1, st);
+	
+	assert.Equal(t, uint64(0x00), r0.Uint64())
+	assert.True(t, st.IsZero())
+	assert.False(t, st.IsNegative())
+}
+
+func TestShiftRight(t *testing.T) {
+	var (
+		st = new(StatusRegister)
+		r0 = new(GeneralRegister)
+		r1 = new(GeneralRegister)
+	)
+	
+	// 85 >> 2 = 1000 0101 >> 2 = 0010 0001 = 21 
+	r0.SetUint8(0x85)
+	r1.SetUint8(2)
+	r0.ShiftRight(*r1, st)
+	
+	assert.Equal(t, uint64(0x21), r0.Uint64())
+	assert.False(t, st.IsZero())
+	assert.False(t, st.IsNegative())
+	
+	// 7F >> 3 = 0111 1111 >> 3 = 0000 1111 = 0F 
+	r0.SetUint8(0x7F)
+	r1.SetUint8(3)
+	r0.ShiftRight(*r1, st)
+	
+	assert.Equal(t, uint64(0x0F), r0.Uint64())
+	assert.False(t, st.IsZero())
+	assert.False(t, st.IsNegative())
+	
+	// 7F >> 100 = 0
+	r0.SetUint8(0x7F)
+	r1.SetUint64(100)
+	r0.ShiftRight(*r1, st);
+	
+	assert.Equal(t, uint64(0x00), r0.Uint64())
+	assert.True(t, st.IsZero())
+	assert.False(t, st.IsNegative())
+	
+	// F7 >> 2 = 1111 0111 >> 2 = 0011 1101 = 3D
+	r0.SetUint8(0xF7)
+	r1.SetUint32(2)
+	r0.ShiftRight(*r1, st);
+	
+	assert.Equal(t, uint64(0x3D), r0.Uint64())
+	assert.False(t, st.IsZero())
+	assert.False(t, st.IsNegative())
+	
+	// 85 >> 1,000,000,000 = 00
+	r0.SetUint8(0x85)
+	r1.SetUint32(1000000000)
+	r0.ShiftRight(*r1, st);
+	
+	assert.Equal(t, uint64(0x00), r0.Uint64())
+	assert.True(t, st.IsZero())
 	assert.False(t, st.IsNegative())
 }

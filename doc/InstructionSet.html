@@ -100,31 +100,6 @@
       
       /* Colours for the opcodes legends */
       
-      /*
-       * Blue
-       * #8DA9E2
-       * #A9BFE9
-       *
-       * Green
-       * #7DBD9D
-       * #9DCEB6
-       *
-       * Orange
-       * #CC7C2C
-       * #EF7F0E
-       *
-       * Yellow
-       * #BCAC34
-       * #E2CB1B
-       *
-       * Red
-       * #CC2C2F
-       * #F40E12
-       *
-       * Grey
-       * #AAAAAA
-       */
-      
       .ins0-binary {
         background-color: #8DA9E2;
       }
@@ -477,7 +452,7 @@ SUM:
   NXT   IX         ; IX0 = IX0 + IS0 
   NXT   CTR        ; CTR0 = CTR0 - CS0
   BNE   SUM        ; LOOP again if CTR0 > 0
-                   ; R contains sum of (DP + 0x100) thru (DP + 0x109)
+                   ; R contains sum of *(DP + 0x100) thru *(DP + 0x109)
 </td>
         </tr>
         <tr>
@@ -490,7 +465,7 @@ SUM:
   ZRO   OFS        ; OFS = 0
   ZRO   R          ; R0 = 0
 SUM:
-  ADD   R,   *PTR  ; R0 = R0 + (DP + 0x100 + IX0 + OFS0)
+  ADD   R,   *PTR  ; R0 = R0 + *(DP + 0x100 + IX0 + OFS0)
   NXT   OFS        ; OFS0 = OFS0 + 4 (SIZE = 32)
   CMP   OFS, 40    ; Z = 1 if OFS == 40
   BNE   SUM        ; Loop until we've summed all 10 32-bit values in current row
@@ -498,7 +473,7 @@ SUM:
   ZRO   OFS        ; OFS0 = 0 
   NXT   CTR        ; CTR0 = CTR0 - CS0
   BNE   SUM        ; LOOP again if CTR0 > 0
-                   ; R0 contains sum of (DP + 0x100) thru (DP + 0x1C8) 
+                   ; R0 contains sum of *(DP + 0x100) thru *(DP + 0x1C7) 
 </td>
         </tr>
         <tr>
@@ -689,10 +664,10 @@ SUM:
             001 = *(PTR) = *(PTR + OFS) = *125<br>
             010 = *[PTR] = *(PTR + IX) = *500<br>
             011 = *([PTR]) = *(PTR + IX + OFS) = *525<br>
-            100 = **PTR = **(PTR) = **100 = *200<br>
-            101 = **(PTR): **(PTR + OFS) = *(200 + 25) = *225<br>
-            110 = **[PTR]: *PTR + IX = 200 + 400 = 600<br>
-            111 = **([PTR]): *PTR + IX + OFS = 200 + 400 + 25 = 625
+            100 = **PTR = *(*PTR) = *(*100) = *200<br>
+            101 = **(PTR): *(*PTR + OFS) = *(*100 + 25) = *225<br>
+            110 = **[PTR]: *(*PTR + IX) = *(*100 + 400) = *600<br>
+            111 = **([PTR]): *(*PTR + IX + OFS) = *(*100 + 400 + 25) = *625
           </td>
         </tr>
         <tr>
@@ -861,8 +836,7 @@ SUM:
             When OO = 11:<br>
             Rx, Ry = R * Rc<br>
             Rx, Ry = R * *PTR<br>
-            Rx is lower 64 bits, Ry is upper 64 bits<br>
-            V = 1 if (H(Or) = H(Ir)) and (H(Or) != H(Or + Ir + C))
+            Rx is lower 64 bits, Ry is upper 64 bits
           </td>
           <td>--ZN---- --------</td>
         </tr>
