@@ -573,20 +573,24 @@ SUM:
           </td>
         </tr>
         <tr>
+          <td>DP0, DP1</td>
+          <td>32 bit unsigned data pointers. DP0 is for (R0, R1), DP1 is for (R2, R3).</td>
+        </tr>
+        <tr>
           <td>PTR0, PTR1</td>
-          <td>32 bit unsigned pointer registers</td>
+          <td>32 bit unsigned pointer registers: PTR0 is for (R0, R1), PTR1 is for (R2, R3)</td>
         </tr>
         <tr>
           <td>OFS0, OFS1</td>
-          <td>16 bit unsigned offset registers</td>
+          <td>16 bit unsigned offset registers: OFS0 is for (R0, R1), OFS1 is for (R2, R3)</td>
         </tr>
         <tr>
           <td>IX0, IX1</td>
-          <td>16 bit unsigned index registers</td>
+          <td>16 bit unsigned index registers: IX0 is for (R0, R1), IX1 is for (R2, R3)</td>
         </tr>
         <tr>
           <td>IS0, IS1</td>
-          <td>16 bit signed index step registers</td>
+          <td>16 bit signed index step registers: IS0 is for (R0, R1), IS1 is for (R2, R3)</td>
         </tr>
         <tr>
           <td>CTR0, CTR1</td>
@@ -594,22 +598,18 @@ SUM:
         </tr>
         <tr>
           <td>CS0, CS1</td>
-          <td>16 bit unsigned counter step registers</td>
+          <td>16 bit unsigned counter step registers: CS0 is for CTR0, CS1 is for CTR1</td>
         </tr>
         <tr>
           <td>PC</td>
           <td>32 bit unsigned program counter</td>
         </tr>
         <tr>
-          <td>DP0, DP1</td>
-          <td>32 bit unsigned data pointers. DP0 is for (R0, R1), DP1 is for (R2, R3).</td>
-        </tr>
-        <tr>
           <td>ST</td>
-          <td>32 bit unsigned status register, consists of CVZNAAAI RPTOOMMX SSSSSSSS UUUUUUUU:<br>
+          <td>32 bit unsigned status register, consists of CVZNAAAI OOMM---- SSSSSSSS UUUUUUUU:<br>
               Carry, oVerflow, Zero, Negative, Address mode, Interrupt Disable<br>
-              general Register, Pointer register, counTer register, Operand size, Math mode, unused<br>
-              There are 8 bits reserved for system use, and 8 bits reserved for users.
+              general Register, counTer register, Operand size, Math mode, unused<br>
+              There are 8 bits reserved for system use, and 8 bits reserved for user use.
           </td>
         </tr>
         <tr>
@@ -673,24 +673,6 @@ SUM:
           <td>Interrupt Disable</td>
         </tr>
         <tr>
-          <td>R</td>
-          <td>
-            Selected general purpose register pair: 0 = (R0, R1), 1 = (R2, R3).
-          </td>
-        </tr>
-        <tr>
-          <td>P</td>
-          <td>
-            Selected pointer register set (PTR, OFS, IX, IS)
-          </td>
-        </tr>
-        <tr>
-          <td>T</td>
-          <td>
-            Selected counter register set (CTR, CS)
-          </td>
-        </tr>
-        <tr>
           <td>OO</td>
           <td>
             Selected Operand Size<br>
@@ -742,10 +724,6 @@ SUM:
             If operand size is 8 bits, a 16 bit value is used.
           </td>
         </tr>
-        <tr>
-          <td>X</td>
-          <td>Unused</td>
-        </tr>
       </tbody>
     </table>
     
@@ -753,7 +731,8 @@ SUM:
     <ul>
       <li>R = Selected general purpose register</li>
       <li>Rc = Complement of selected general purpose register</li>
-      <li>Rx, Ry is either R0, R1 or R2, R3</li>
+      <li>Rx, Ry is either (R0, R1) or (R2, R3)</li>
+      <li>DP = Selected data pointer register</li>
       <li>PTR = Selected pointer register</li>
       <li>*PTR = Selected pointer register data in current addressing mode</li>
       <li>OFS = Selected offset register</li>
@@ -783,122 +762,150 @@ SUM:
           <td colspan="4">Binary (<span class="count-ins0-binary"></span> opcodes)</td>
         </tr>
         <tr>
-          <td>ADD</td>
-          <td>Add with carry</td>
+          <td>ADD0, ADD2</td>
+          <td>Add R with (Rc/*PTR) and Carry</td>
           <td>
-            R = R + Rc + C<br>
-            R = R + *PTR + C<br>
-            C = 1 if (H(Or) = 1 or H(Ir) = 1) and (H(Or + Ir + C) = 0)<br>
-            V = 1 if (H(Or) = H(Ir)) and (H(Or) != H(Or + Ir + C))
+            R = R + (Rc/*PTR) + C<br>
+            C = 1 if (H(Op1) = 1 or H(Op2) = 1) and (H(Op1 + Op2 + C) = 0)<br>
+            V = 1 if (H(Op1) = H(Op2)) and (H(Op1) != H(Op1 + Op2 + C))
           </td>
           <td>CVZN---- --------</td>
         </tr>
         <tr>
-          <td>AND</td>
-          <td>Bitwise AND</td>
+          <td>AND0, AND2</td>
+          <td>Bitwise AND R with (Rc/*PTR)</td>
           <td>
-            R = R ∧ Rc<br>
-            R = R ∧ *PTR
+            R = R ∧ (Rc/*PTR)
           </td>
           <td>--ZN---- --------</td>
         </tr>
         <tr>
-          <td>CMP</td>
-          <td>Compare</td>
+          <td>CMP0, CMP2</td>
+          <td>Compare R with (Rc/*PTR)</td>
           <td>
-            CMP R, Rc<br>
-            CMP R, *PTR<br>
-            C = 1 if R &gt;= Rc/*PTR unsigned<br>
-            V = 1 if R &gt;= Rc/*PTR signed<br>
-            Z = 1 if R = Rc/*PTR
+            CMP R, (Rc/*PTR)<br>
+            C = 1 if Op1 &gt;= Op2 unsigned<br>
+            V = 1 if Op1 &gt;= Op2 signed<br>
+            Z = 1 if Op1 = Op2
           </td>
           <td>CVZ----- --------</td>
         </tr>
         <tr>
-          <td>DIV</td>
-          <td>Division</td>
+          <td>DIVS0, DIVS2</td>
+          <td>Signed Division with R and (Rc/*PTR)</td>
           <td>
-            R' = R / Rc; Rc' = R mod Rc<br>
-            R' = R / *PTR; Rc' = R mod *PTR<br>
-            N is sign of quotient and V is sign of remainder in integer mode<br>
-            C and V are set in floating point mode<br>
-            If denominator is zero:<br>
-            If math mode is floating point, result is +/- infinity,<br>
-            else execute *FFFFFFFC interrupt with R0 = 3 (division by zero)
+            R' = R / (Rc/*PTR)<br>
+            In integer mode:<br>
+            Rc' = R mod Rc/*PTR<br>
+            N is sign of quotient and V is sign of remainder<br>
+            If denominator is zero execute *FFFFFFFC interrupt with R0 = 3 (division by zero)<br>
+            In floating point mode:<br>
+            C and V are set<br>
+            If denominator is zero, result is +/- infinity
           </td>
           <td>-VZN---- --------</td>
         </tr>
         <tr>
-          <td>MUL</td>
-          <td>Multiply</td>
+          <td>DIVU0, DIVU2</td>
+          <td>Unsigned Division with R and (Rc/*PTR)</td>
           <td>
+            R' = R / (Rc/*PTR)<br>
+            In integer mode:<br>
+            Rc' = R mod Rc/*PTR<br>
+            N is sign of quotient and V is sign of remainder<br>
+            If denominator is zero execute *FFFFFFFC interrupt with R0 = 3 (division by zero)<br>
+            In floating point mode:<br>
+            Division is still signed<br>
+            C and V are set<br>
+            If denominator is zero, result is +/- infinity
+          </td>
+          <td>
+            -VZN---- --------<br>
+            C is set in floating point mode
+          </td>
+        </tr>
+        <tr>
+          <td>MULS0, MULS2</td>
+          <td>Signed Multiply with R and (Rc/*PTR)</td>
+          <td>
+          	In integer mode:<br>
             When OO = 00, 01, or 10:<br>
-            R = R * Rc<br>
-            R = R * *PTR<br>
+            R = R * (Rc/*PTR)<br>
             When OO = 11:<br>
-            Rx, Ry = R * Rc<br>
-            Rx, Ry = R * *PTR<br>
-            Rx is lower 64 bits, Ry is upper 64 bits
+            R, Rc = R * (Rc/*PTR)<br>
+            R is lower 64 bits, Rc is upper 64 bits<br>
+            In floating point mode:<br>
+            R = R * (Rc/*PTR)
           </td>
           <td>--ZN---- --------</td>
         </tr>
         <tr>
-          <td>OR</td>
-          <td>Bitwise OR</td>
+          <td>MULU0, MULU2</td>
+          <td>Unsigned Multiply with R and (Rc/*PTR)</td>
           <td>
-            R = R ∨ Rc<br>
-            R = R ∨ *PTR
+          	In integer mode:<br>
+            When OO = 00, 01, or 10:<br>
+            R = R * (Rc/*PTR)<br>
+            When OO = 11:<br>
+            R, Rc = R * (Rc/*PTR)<br>
+            R is lower 64 bits, Rc is upper 64 bits<br>
+            In floating point mode:<br>
+            Multiplication is still signed<br>
+            R = R * (Rc/*PTR)
           </td>
           <td>--ZN---- --------</td>
         </tr>
         <tr>
-          <td>SHA</td>
-          <td>Shift bits right, arithmetic</td>
+          <td>OR0, OR2</td>
+          <td>Bitwise OR R with (Rc/*PTR)</td>
           <td>
-            R = R &gt;&gt; Rc<br>
-            R = R &gt;&gt; U8<br>
-            Highest Rc bits of R &gt;&gt; Rc = H(R), causing the sign of R to remain the same<br>
-            C = 1 if any of the lower Rc bits of R are set
+            R = R ∨ (Rc/*PTR)
+          </td>
+          <td>--ZN---- --------</td>
+        </tr>
+        <tr>
+          <td>SHA0, SHA2</td>
+          <td>Shift R bits right (Rc/U8) times, arithmetic</td>
+          <td>
+            R = R &gt;&gt; (Rc/U8)<br>
+            Highest Op2 bits of R' = H(R), causing the sign of R to remain the same<br>
+            C = 1 if any of the lower Op2 bits of R are set
           </td>
           <td>C-ZN---- --------</td>
         </tr>
         <tr>
-          <td>SHL</td>
-          <td>Shift bits left</td>
+          <td>SHL0, SHL2</td>
+          <td>Shift R bits left (Rc/U8) times</td>
           <td>
-            R = R &lt;&lt; Rc<br>
-            R = R &lt;&lt; U8<br>
-            C = 1 if any of the upper Rc bits of R are set
+            R = R &lt;&lt; (Rc/U8)<br>
+            C = 1 if any of the upper Op2 bits of R are set
           </td>
           <td>C-ZN---- --------</td>
         </tr>
         <tr>
-          <td>SHR</td>
-          <td>Shift bits right</td>
+          <td>SHR0, SHR2</td>
+          <td>Shift R bits right (Rc/U8) times</td>
           <td>
-            R = R &gt;&gt; Rc<br>
-            R = R &gt;&gt; U8<br>
-            C = 1 if any of the lower Rc bits of R are set
+            R = R &gt;&gt; (Rc/U8)<br>
+            C = 1 if any of the lower Op2 bits of R are set
           </td>
           <td>C-ZN---- --------</td>
         </tr>
         <tr>
-          <td>SUB</td>
-          <td>Subtract with borrow</td>
+          <td>SUB0 SUB2</td>
+          <td>Subtract R with (Rc/*PTR) and Borrow (Carry)</td>
           <td>
-            R = R - Rc - C<br>
-            R = R - *PTR - C<br>
-            C = 1 if (Rc/*PTR + C) > Or unsigned<br>
-            V = 1 if (H(Or) != H(Ir)) and (H(Rc/*PTR) = H(R - Rc/*PTR - C))<br>
+            R = R - (Rc/*PTR) - C<br>
+            C = 1 if R' > R unsigned<br>
+            V = 1 if (H(R') != H(R)) and (H(Op2) = H(R'))<br>
           </td>
           <td>CVZN---- --------</td>
         </tr>
         <tr>
-          <td>XOR</td>
-          <td>Bitwise XOR</td>
+          <td>XOR0, XOR2</td>
+          <td>Bitwise XOR with R and (Rc/*PTR)</td>
           <td>
-            R = R ⊻ Rc<br>
-            R = R ⊻ *PTR
+            R = R ⊻ (Rc/*PTR)<br>
           </td>
           <td>--ZN---- --------</td>
         </tr>
@@ -970,11 +977,26 @@ SUM:
           <td>-------- --------</td>
         </tr>
         <tr>
+          <td>JMA0, JMA2</td>
+          <td>Jump to an absolute unsigned address</td>
+          <td>
+            PC = (lowest 32 bits of R)
+          </td>
+          <td>-------- --------</td>
+        </tr>
+        <tr>
           <td>JMA</td>
           <td>Jump to an absolute unsigned address</td>
           <td>
-            PC = R<br>
             PC = U32
+          </td>
+          <td>-------- --------</td>
+        </tr>
+        <tr>
+          <td>JMP0, JMP2</td>
+          <td>Jump to relative signed address</td>
+          <td>
+            PC = PC + (lowest 16 bits of R)
           </td>
           <td>-------- --------</td>
         </tr>
@@ -982,8 +1004,15 @@ SUM:
           <td>JMP</td>
           <td>Jump to relative signed address</td>
           <td>
-            PC = PC + R<br>
             PC = PC + S16
+          </td>
+          <td>-------- --------</td>
+        </tr>
+        <tr>
+          <td>JSA0, JSA2</td>
+          <td>Jump to subroutine at an absolute unsigned address</td>
+          <td>
+            Push PC; PC = (lowest 32 bits of R)<br>
           </td>
           <td>-------- --------</td>
         </tr>
@@ -991,8 +1020,15 @@ SUM:
           <td>JSA</td>
           <td>Jump to subroutine at an absolute unsigned address</td>
           <td>
-            Push PC; PC = R<br>
-            Push PC; PC = U32
+            Push PC; PC = U32<br>
+          </td>
+          <td>-------- --------</td>
+        </tr>
+        <tr>
+          <td>JSR0, JSR2</td>
+          <td>Jump to subroutine at a relative signed address</td>
+          <td>
+            Push PC; PC = PC + (lowest 16 bits of R)
           </td>
           <td>-------- --------</td>
         </tr>
@@ -1000,7 +1036,6 @@ SUM:
           <td>JSR</td>
           <td>Jump to subroutine at a relative signed address</td>
           <td>
-            Push PC; PC = PC + R<br>
             Push PC; PC = PC + S16
           </td>
           <td>-------- --------</td>
@@ -1023,23 +1058,25 @@ SUM:
             PUL R1<br>
             PUL R2<br>
             PUL R3<br>
+            PUL DP0<br>
             PUL PTR0<br>
             PUL OFS0<br>
             PUL IX0<br>
             PUL IS0<br>
+            PUL CTR0<br>
+            PUL CS0<br>
+            PUL DP1<br>
             PUL PTR1<br>
             PUL OFS1<br>
             PUL IX1<br>
             PUL IS1<br>
-            PUL CTR0<br>
-            PUL CS0<br>
             PUL CTR1<br>
-            PUL CS1br>
-            Pull PC<br>
-            Pull ST<br>
+            PUL CS1<br>
+            PUL PC<br>
+            PUL ST<br>
             A hardware error occurs if the stack underflows
           </td>
-          <td>CVZNAAAI RRPTOOMM</td>
+          <td>CVZNAAAI OOMM----</td>
         </tr>
         <tr>
           <td colspan="4">Floating Point (<span class="count-ins0-float"></span> opcodes)</td>
@@ -1185,16 +1222,16 @@ SUM:
         </tr>
         <tr>
           <td>LD</td>
-          <td>Load literal operand</td>
+          <td>Load destination register with literal operand</td>
           <td>
             LD R, O<br>
+            LD DP, U32<br>
             LD PTR, U32<br>
             LD OFS, U16<br>
             LD IX, U16<br>
             LD IS, S16<br>
             LD CTR, U32<br>
             LD CS, U16<br>
-            LD DP, U32<br>
             LD SB, U32<br>
             LD SP, U32
           </td>
@@ -1204,9 +1241,10 @@ SUM:
         </tr>
         <tr>
           <td>RD</td>
-          <td>Read register from register or memory</td>
+          <td>Read destination register with register or memory</td>
           <td>
             RD R, Rc<br>
+            RD R, DP<br>
             RD R, PTR<br>
             RD R, *PTR<br>
             RD R, OFS<br>
@@ -1214,7 +1252,6 @@ SUM:
             RD R, IS<br>
             RD R, CTR<br>
             RD R, CS<br>
-            RD R, DP<br>
             RD R, ST<br>
             RD R, SB<br>
             RD R, SP<br>
@@ -1228,9 +1265,10 @@ SUM:
         </tr>
         <tr>
           <td>WD</td>
-          <td>Write register to register or memory</td>
+          <td>Write source register to destination register or memory</td>
           <td>
             WD R, Rc<br>
+            WD R, DP<br>
             WD R, PTR<br>
             WD R, *PTR<br>
             WD R, OFS<br>
@@ -1238,7 +1276,6 @@ SUM:
             WD R, IS<br>
             WD R, CTR<br>
             WD R, CS<br>
-            WD R, DP<br>
             WD R, ST<br>
             WD R, SB<br>
             WD R, SP<br>
@@ -1255,6 +1292,7 @@ SUM:
           <td>Swap data</td>
           <td>
             SWP R, Rc<br>
+            SWP R, DP<br>
             SWP R, PTR<br>
             SWP R, *PTR<br>
             SWP R, OFS<br>
@@ -1293,12 +1331,14 @@ SUM:
             PSH R1<br>
             PSH R2<br>
             PSH R3<br>
+            PSH DP0<br>
             PSH PTR0<br>
             PSH OFS0<br>
             PSH IX0<br>
             PSH IS0<br>
             PSH CTR0<br>
             PSH CS0<br>
+            PSH DP1<br>
             PSH PTR1<br>
             PSH OFS1<br>
             PSH IX1<br>
@@ -1321,12 +1361,14 @@ SUM:
             PUL R1<br>
             PUL R2<br>
             PUL R3<br>
+            PUL DP0<br>
             PUL PTR0<br>
             PUL OFS0<br>
             PUL IX0<br>
             PUL IS0<br>
             PUL CTR0<br>
             PUL CS0<br>
+            PUL DP1<br>
             PUL PTR1<br>
             PUL OFS1<br>
             PUL IX1<br>
@@ -1426,99 +1468,75 @@ SUM:
         </tr>
         <tr>
           <td>SR0</td>
-          <td>Select R0</td>
-          <td>Set RR = 0</td>
-          <td>-------- 00------</td>
+          <td>Select (R0, R1)</td>
+          <td>Set R = 0</td>
+          <td>-------- 0-------</td>
         </tr>
         <tr>
           <td>SR1</td>
-          <td>Select R1</td>
-          <td>Set RR = 1</td>
-          <td>-------- 01------</td>
-        </tr>
-        <tr>
-          <td>SR2</td>
-          <td>Select R2</td>
-          <td>Set RR = 2</td>
-          <td>-------- 10------</td>
-        </tr>
-        <tr>
-          <td>SR3</td>
-          <td>Select R3</td>
-          <td>Set RR = 3</td>
-          <td>-------- 11------</td>
-        </tr>
-        <tr>
-          <td>SPS0</td>
-          <td>Select pointer set 0</td>
-          <td>Set P = 0</td>
-          <td>-------- --0-----</td>
-        </tr>
-        <tr>
-          <td>SPS1</td>
-          <td>Select pointer set 1</td>
-          <td>Set P = 1</td>
-          <td>-------- --1-----</td>
+          <td>Select (R2, R3)</td>
+          <td>Set R = 1</td>
+          <td>-------- 1-------</td>
         </tr>
         <tr>
           <td>SCS0</td>
           <td>Select counter set 0</td>
           <td>Set T = 0</td>
-          <td>-------- ---0----</td>
+          <td>-------- -0------</td>
         </tr>
         <tr>
           <td>SCS1</td>
           <td>Select counter set 1</td>
           <td>Set T = 1</td>
-          <td>-------- ---1----</td>
+          <td>-------- -1------</td>
         </tr>
         <tr>
           <td>SOS0</td>
           <td>Select operand size 0 (8 bits)</td>
           <td>Set OO = 0</td>
-          <td>-------- ----00--</td>
+          <td>-------- --00----</td>
         </tr>
         <tr>
           <td>SOS1</td>
           <td>Select operand size 1 (16 bits)</td>
           <td>Set OO = 1</td>
-          <td>-------- ----01--</td>
+          <td>-------- --01----</td>
         </tr>
         <tr>
           <td>SOS2</td>
           <td>Select operand size 2 (32 bits)</td>
           <td>Set OO = 2</td>
-          <td>-------- ----10--</td>
+          <td>-------- --10----</td>
         </tr>
         <tr>
           <td>SOS3</td>
           <td>Select operand size 3 (64 bits)</td>
           <td>Set OO = 3</td>
-          <td>-------- ----11--</td>
+          <td>-------- --11----</td>
         </tr>
         <tr>
           <td>SMM0</td>
           <td>Select math mode 0</td>
           <td>Set MM = 0</td>
-          <td>-------- ------00</td>
+          <td>-------- ----00--</td>
         </tr>
         <tr>
           <td>SMM1</td>
           <td>Select math mode 1</td>
           <td>Set MM = 1</td>
-          <td>-------- ------01</td>
+          <td>-------- ----01--</td>
         </tr>
         <tr>
           <td>SMM2</td>
           <td>Select math mode 2</td>
           <td>Set MM = 2</td>
-          <td>-------- ------10</td>
+          <td>-------- ----10--</td>
         </tr>
         <tr>
           <td>SMM3</td>
           <td>Select math mode 3</td>
           <td>Set MM = 3</td>
-          <td>-------- ------11</td>
+          <td>-------- ----11--</td>
         </tr>
         <tr>
           <td colspan="4">Unary (<span class="count-ins0-unary"></span> opcodes)</td>
@@ -1576,7 +1594,7 @@ SUM:
         </tr>
         <tr>
           <td>NXT</td>
-          <td>Add step to register</td
+          <td>Add step to register</td>
           <td>
             OFS = OFS + operand size (1 - 4)<br>
             IX = IX + IS<br>
@@ -1596,31 +1614,30 @@ SUM:
           <td>--ZN---- --------</td>
         </tr>
         <tr>
-          <td>SHAC</td>
-          <td>Arithmetic shift right with carry</td>
+          <td>SHA</td>
+          <td>Arithmetic shift right</td>
           <td>
             R = R &gt;&gt; 1<br>
-            H'(R) = H(R)<br>
-            C = BIT0(R)
+            H'(R) = H(R)
           </td>
-          <td>C-ZN--- --------</td>
+          <td>--ZN--- --------</td>
         </tr>
         <tr>
-          <td>SHLC</td>
+          <td>SHL</td>
           <td>Shift left with carry</td>
           <td>
             R = R &lt;&lt; 1<br>
-            BIT0(R) = C<br>
+            BIT0'(R) = C<br>
             C = H(R)
           </td>
           <td>C-ZN--- --------</td>
         </tr>
         <tr>
-          <td>SHRC</td>
+          <td>SHR</td>
           <td>Shift right with carry</td>
           <td>
             R = R &gt;&gt; 1<br>
-            H(R) = C<br>
+            H'(R) = C<br>
             C = BIT0(R)
           </td>
           <td>C-ZN--- --------</td>
