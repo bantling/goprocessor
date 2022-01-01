@@ -73,7 +73,7 @@ const (
 	// STOperandSet is ST filter for setting operand size
 	STOperandSet uint32 = 0xFFFFFFFF - STOperandRead
 
-	// STOperandShift is the ST shift for operand
+	// STOperandShift is the ST shift operand
 	STOperandShift int = 18
 
 	// STOperand8 is ST operand size value for 8 bits

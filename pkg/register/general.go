@@ -457,3 +457,40 @@ func (r *GeneralRegister) ShiftRight(op GeneralRegister, st *StatusRegister) {
 	st.Zero(*r == 0)
 	st.Negative(r.Negative())
 }
+
+// SubtractInteger sets r = r - op - Carry using integer math, with the following side effects:
+// - Result is sign extended
+// - Carry is true if unsigned result > original value
+// - Overflow is true if the two operands are the same sign and the result is the opposite sign
+// - Zero is true if result is zero
+// - Negative is true if result is negative
+func (r *GeneralRegister) SubtractInteger(op GeneralRegister, st *StatusRegister) {
+	oldVal := *r
+	oldNeg := oldVal.Negative()
+
+	*r -= op
+	if st.IsCarry() {
+		*r--
+	}
+
+	r.ExtendSign(*st)
+	newNeg := r.Negative()
+
+	st.Carry(*r > oldVal)
+	st.Overflow((oldNeg != op.Negative()) && (op.Negative() == r.Negative()))
+	st.Zero(*r == 0)
+	st.Negative(newNeg)
+}
+
+// Xor r and op, with the following side effects:
+// - Result is sign extended
+// - Zero is true if result is zero
+// - Negative is true if result is negative
+func (r *GeneralRegister) Xor(op GeneralRegister, st *StatusRegister) {
+	*r ^= op
+
+	r.ExtendSign(*st)
+
+	st.Zero(*r == 0)
+	st.Negative(r.Negative())
+}

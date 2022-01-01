@@ -567,9 +567,7 @@ SUM:
             Instructions that require two of these registers will work with a pair,<br>
             where one register is referred to as the complement:<br>
             R0 complement = R1<br>
-            R1 complement = R0<br>
             R2 complement = R3<br>
-            R3 complement = R2<br>
             When a literal or memory operand is loaded into a register, and the current operand size<br>
             is less than 64 bits, the highest bit of the operand is copied into the upper bits to extend the sign.
           </td>
@@ -603,14 +601,14 @@ SUM:
           <td>32 bit unsigned program counter</td>
         </tr>
         <tr>
-          <td>DP</td>
-          <td>32 bit unsigned data pointer</td>
+          <td>DP0, DP1</td>
+          <td>32 bit unsigned data pointers. DP0 is for (R0, R1), DP1 is for (R2, R3).</td>
         </tr>
         <tr>
           <td>ST</td>
-          <td>32 bit unsigned status register, consists of CVZNAAAI RRPTOOMM SSSSSSSS UUUUUUUU:<br>
+          <td>32 bit unsigned status register, consists of CVZNAAAI RPTOOMMX SSSSSSSS UUUUUUUU:<br>
               Carry, oVerflow, Zero, Negative, Address mode, Interrupt Disable<br>
-              Register, Pointer register, counTer register, Operand size, Math mode<br>
+              general Register, Pointer register, counTer register, Operand size, Math mode, unused<br>
               There are 8 bits reserved for system use, and 8 bits reserved for users.
           </td>
         </tr>
@@ -675,9 +673,9 @@ SUM:
           <td>Interrupt Disable</td>
         </tr>
         <tr>
-          <td>RR</td>
+          <td>R</td>
           <td>
-            Selected general purpose register
+            Selected general purpose register pair: 0 = (R0, R1), 1 = (R2, R3).
           </td>
         </tr>
         <tr>
@@ -743,6 +741,10 @@ SUM:
             Implemented as IEEE 754 Half Precision (16 bits), Single Precision (32 bits), or Double Precision (64 bits).<br>
             If operand size is 8 bits, a 16 bit value is used.
           </td>
+        </tr>
+        <tr>
+          <td>X</td>
+          <td>Unused</td>
         </tr>
       </tbody>
     </table>

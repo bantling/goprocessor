@@ -632,7 +632,7 @@ func TestGeneralRegisterOr(t *testing.T) {
 	assert.True(t, st.IsNegative())
 }
 
-func TestShiftRightArithmetic(t *testing.T) {
+func TestGeneralRegisterShiftRightArithmetic(t *testing.T) {
 	var (
 		st = new(StatusRegister)
 		r0 = new(GeneralRegister)
@@ -685,7 +685,7 @@ func TestShiftRightArithmetic(t *testing.T) {
 	assert.True(t, st.IsNegative())
 }
 
-func TestShiftLeft(t *testing.T) {
+func TestGeneralRegisterShiftLeft(t *testing.T) {
 	var (
 		st = new(StatusRegister)
 		r0 = new(GeneralRegister)
@@ -721,7 +721,7 @@ func TestShiftLeft(t *testing.T) {
 	assert.False(t, st.IsNegative())
 }
 
-func TestShiftRight(t *testing.T) {
+func TestGeneralRegisterShiftRight(t *testing.T) {
 	var (
 		st = new(StatusRegister)
 		r0 = new(GeneralRegister)
@@ -771,5 +771,138 @@ func TestShiftRight(t *testing.T) {
 	
 	assert.Equal(t, uint64(0x00), r0.Uint64())
 	assert.True(t, st.IsZero())
+	assert.False(t, st.IsNegative())
+}
+
+func TestGeneralRegisterSubtractInteger(t *testing.T) {
+	var (
+		r0 = new(GeneralRegister)
+		r1 = new(GeneralRegister)
+		st = new(StatusRegister)
+	)
+
+	// 0 - 1
+	r0.SetUint64(0)
+	r1.SetUint8(1)
+	st.ClearCarry()
+	r0.SubtractInteger(*r1, st)
+
+	assert.Equal(t, MaxUint64, r0.Uint64())
+	assert.True(t, st.IsCarry())
+	assert.False(t, st.IsOverflow())
+	assert.False(t, st.IsZero())
+	assert.True(t, st.IsNegative())
+
+	// MaxUint64 - 1
+	r0.SetUint64(MaxUint64)
+	r1.SetUint8(1)
+	st.ClearCarry()
+	r0.SubtractInteger(*r1, st)
+
+	assert.Equal(t, uint64(MaxUint64 - 1), r0.Uint64())
+	assert.False(t, st.IsCarry())
+	assert.False(t, st.IsOverflow())
+	assert.False(t, st.IsZero())
+	assert.True(t, st.IsNegative())
+
+	// 7F - 1
+	r0.SetUint8(0x7F)
+	r1.SetUint8(1)
+	st.ClearCarry()
+	r0.SubtractInteger(*r1, st)
+
+	assert.Equal(t, uint64(0x7E), r0.Uint64())
+	assert.False(t, st.IsCarry())
+	assert.False(t, st.IsOverflow())
+	assert.False(t, st.IsZero())
+	assert.False(t, st.IsNegative())
+
+	// 80 - 1
+	r0.SetUint8(0x80)
+	r1.SetUint8(1)
+	st.ClearCarry()
+	r0.SubtractInteger(*r1, st)
+
+	assert.Equal(t, uint64(0x7F), r0.Uint64())
+	assert.False(t, st.IsCarry())
+	assert.True(t, st.IsOverflow())
+	assert.False(t, st.IsZero())
+	assert.False(t, st.IsNegative())
+
+	// 80 - 1
+	r0.SetUint8(0x80)
+	r1.SetUint64(1)
+	st.ClearCarry()
+	r0.SubtractInteger(*r1, st)
+
+	assert.Equal(t, uint64(0x7F), r0.Uint64())
+	assert.False(t, st.IsCarry())
+	assert.True(t, st.IsOverflow())
+	assert.False(t, st.IsZero())
+	assert.False(t, st.IsNegative())
+
+	// 0x01 - 0 - C
+	r0.SetUint16(0x01)
+	r1.SetUint8(0)
+	st.SetCarry()
+	r0.SubtractInteger(*r1, st)
+
+	assert.Equal(t, uint64(0x00), r0.Uint64())
+	assert.False(t, st.IsCarry())
+	assert.False(t, st.IsOverflow())
+	assert.True(t, st.IsZero())
+	assert.False(t, st.IsNegative())
+}
+
+func TestGeneralRegisterXor(t *testing.T) {
+	var (
+		st = new(StatusRegister)
+		r0 = new(GeneralRegister)
+		r1 = new(GeneralRegister)
+	)
+
+	// F0 ^ 0F = FFFFFFFFFFFFFFFF
+	r0.SetUint8(0xF0)
+	r1.SetUint8(0x0F)
+	r0.Xor(*r1, st)
+
+	assert.Equal(t, uint64(0xFFFFFFFFFFFFFFFF), r0.Uint64())
+	assert.False(t, st.IsZero())
+	assert.True(t, st.IsNegative())
+
+	// F0 ^ 1F = FFFFFFFFFFFFFFEF
+	r0.SetUint8(0xF0)
+	r1.SetUint8(0x1F)
+	r0.Xor(*r1, st)
+
+	assert.Equal(t, uint64(0xFFFFFFFFFFFFFFEF), r0.Uint64())
+	assert.False(t, st.IsZero())
+	assert.True(t, st.IsNegative())
+
+	// 79 ^ AA = 0111 1001 ^ 1010 1010 = 1101 0011 = D3
+	r0.SetUint8(0x79)
+	r1.SetUint8(0xAA)
+	r0.Xor(*r1, st)
+
+	assert.Equal(t, uint64(0xFFFFFFFFFFFFFFD3), r0.Uint64())
+	assert.False(t, st.IsZero())
+	assert.True(t, st.IsNegative())
+
+	// 24 ^ 42 = 0010 0100 ^ 0100 0010 = 0110 0110 = 66  
+	r0.SetUint8(0x24)
+	r1.SetUint8(0x42)
+	r0.Xor(*r1, st)
+
+	assert.Equal(t, uint64(0x66), r0.Uint64())
+	assert.False(t, st.IsZero())
+	assert.False(t, st.IsNegative())
+
+	// 99 ^ 88 = 1001 1001 ^ 1000 1000 = 0001 0001
+	r0.SetUint8(0x99)
+	r1.SetUint8(0x88)
+	r0.Xor(*r1, st)
+
+	assert.Equal(t, uint64(0x11), r0.Uint64())
+	assert.False(t, st.IsZero())
 	assert.False(t, st.IsNegative())
 }
