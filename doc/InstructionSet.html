@@ -205,7 +205,7 @@
             var opcodeCountsToClass = colourNames.reduce(
               function(opcodeCountsToClass, value) {
                 opcodeCountsToClass.push(
-                  {cssClass: value, count: document.querySelectorAll('#opcodes .' + value).length}
+                  {cssClass: value, count: document.querySelectorAll('#opcodes0 .' + value).length}
                 );
                 
                 return opcodeCountsToClass;
@@ -1396,6 +1396,13 @@ SUM:
           <td>-------- --------</td>
         </tr>
         <tr>
+          <td>EXT</td>
+          <td>Extended Instruction</td>
+          <td>0</td>
+          <td>Read next byte and execute as a page 1 instruction</td>
+          <td>-------- --------</td>
+        </tr>
+        <tr>
           <td colspan="4">Stack (<span class="count-ins0-stack"></span> opcodes)</td>
         </tr>
         <tr>
@@ -1899,7 +1906,7 @@ SUM:
           <td class="ins0-branch"></td>
         </tr>
         <tr>
-          <td>Pointer</td>
+          <td>Floating Point</td>
           <td><span class="count-ins0-float"></span></td>
           <td class="ins0-float"></td>
 
@@ -1927,8 +1934,8 @@ SUM:
       </tbody>
     </table>
     
-    <p>Opcodes</p>
-    <table id="opcodes">
+    <p>Opcodes - Page 0</p>
+    <table id="opcodes0">
       <thead>
         <tr>
           <th></th>
@@ -1995,10 +2002,10 @@ SUM:
           <td class="ins0-binary">SBB R1,R1c</td>
           <td class="ins0-binary">SUB R0,R0c</td>
           <td class="ins0-binary">SUB R1,R1c</td>
-          <td class="ins0-binary">SUB OFS0, U16</td>
-          <td class="ins0-binary">SUB OFS1, U16</td>
-          <td class="ins0-binary">SUB IX0, U16</td>
-          <td class="ins0-binary">SUB IX1, U16</td>
+          <td class="ins0-binary">SUB OFS0,U16</td>
+          <td class="ins0-binary">SUB OFS1,U16</td>
+          <td class="ins0-binary">SUB IX0,U16</td>
+          <td class="ins0-binary">SUB IX1,U16</td>
           <td class="ins0-binary">XOR R0,R0c</td>
           <td class="ins0-binary">XOR R1,R1c</td>
           <td class="ins0-branch">BCC</td>
@@ -2036,19 +2043,19 @@ SUM:
           <td class="ins0-float">FABS R1c</td>
           <td class="ins0-float">FACS R0,R0c</td>
           <td class="ins0-float">FACS R1,R1c</td>
-          <td class="ins0-float">FASN R0, R0c</td>
-          <td class="ins0-float">FASN R1, R1c</td>
-          <td class="ins0-float">FATN R0, R0c</td>
-          <td class="ins0-float">FATN R1, R1c</td>
+          <td class="ins0-float">FASN R0,R0c</td>
+          <td class="ins0-float">FASN R1,R1c</td>
+          <td class="ins0-float">FATN R0,R0c</td>
+          <td class="ins0-float">FATN R1,R1c</td>
           <td class="ins0-float">FCEL R0</td>
           <td class="ins0-float">FCEL R0c</td>
           <td class="ins0-float">FCEL R1</td>
           <td class="ins0-float">FCEL R1c</td>
-          <td class="ins0-float">FCOS R0, R0c</td>
+          <td class="ins0-float">FCOS R0,R0c</td>
         </tr>          
         <tr>
           <th>5</th>
-          <td class="ins0-float">FCOS R1, R1c</td>
+          <td class="ins0-float">FCOS R1,R1c</td>
           <td class="ins0-float">FF2S R0</td>
           <td class="ins0-float">FF2S R0c</td>
           <td class="ins0-float">FF2S R1</td>
@@ -2061,126 +2068,90 @@ SUM:
           <td class="ins0-float">FFLR R0c</td>
           <td class="ins0-float">FFLR R1</td>
           <td class="ins0-float">FFLR R1c</td>
-          <td class="ins0-float">FLOG R0, R0c</td>
-          <td class="ins0-float">FLOG R1, R1c</td>
-          <td class="ins0-float">FNLG R0, R0c</td>
+          <td class="ins0-float">FLOG R0,R0c</td>
+          <td class="ins0-float">FLOG R1,R1c</td>
+          <td class="ins0-float">FNLG R0,R0c</td>
         </tr>
         <tr>
           <th>6</th>
-          <td class="ins0-float">FNLG R1, R1c</td>
-          <td class="ins0-float">FPOW R0, R0c</td>
-          <td class="ins0-float">FPOW R1, R1c</td>
-          <td class="ins0-float">FSIN R0, R0c</td>
-          <td class="ins0-float">FSIN R1, R1c</td>
-          <td class="ins0-float">FSQR R0, R0c</td>
-          <td class="ins0-float">FSQR R1, R1c</td>
-          <td class="ins0-float">FTAN R0, R0c</td>
-          <td class="ins0-float">FTAN R1, R1c</td>
+          <td class="ins0-float">FNLG R1,R1c</td>
+          <td class="ins0-float">FPOW R0,R0c</td>
+          <td class="ins0-float">FPOW R1,R1c</td>
+          <td class="ins0-float">FSIN R0,R0c</td>
+          <td class="ins0-float">FSIN R1,R1c</td>
+          <td class="ins0-float">FSQR R0,R0c</td>
+          <td class="ins0-float">FSQR R1,R1c</td>
+          <td class="ins0-float">FTAN R0,R0c</td>
+          <td class="ins0-float">FTAN R1,R1c</td>
           <td class="ins0-float">FU2F R0</td>
           <td class="ins0-float">FU2F R0c</td>
           <td class="ins0-float">FU2F R1</td>
           <td class="ins0-float">FU2F R1c</td>
-          <td class="ins0-move">MOV CP,U32</td>
-          <td class="ins0-move">MOV SB, U32</td>
-          <td class="ins0-move">MOV SP, U16</td>
-        </tr>
-        <tr>
-          <th>5</th>
-          <td class="ins0-move">MOV R0,O</td>
-          <td class="ins0-move">MOV R0c,O</td>
-          <td class="ins0-move">MOV R1,O</td>
-          <td class="ins0-move">MOV R1c,O</td>
-          <td class="ins0-move">MOV DP0,U32</td>
-          <td class="ins0-move">MOV PTR0, U32</td>
-          <td class="ins0-move">MOV OFS0, U16</td>
-          <td class="ins0-move">MOV IX0, U16</td>
-          <td class="ins0-move">MOV DP1,U32</td>
-          <td class="ins0-move">MOV PTR1, U32</td>
-          <td class="ins0-move">MOV OFS1, U16</td>
-          <td class="ins0-move">MOV IX1, U16</td>
-          <td class="ins0-move">MOV R0, CP</td>
-          <td class="ins0-move">MOV R0, ST</td>
-          <td class="ins0-move">MOV R0, SB</td>
-          <td class="ins0-move">MOV R0, SP</td>
-        </tr>
-        <tr>
-          <th>6</th>
-          <td class="ins0-move">MOV CP, R0</td>
-          <td class="ins0-move">MOV ST, R0</td>
-          <td class="ins0-move">MOV SB, R0</td>
-          <td class="ins0-move">MOV SP, R0</td>
-          <td class="ins0-move">MOV R0, R0c</td>
-          <td class="ins0-move">MOV R0, R1</td>
-          <td class="ins0-move">MOV R0, R1c</td>
-          <td class="ins0-move">MOV R0c, R0</td>
-          <td class="ins0-move">MOV R0c, R1</td>
-          <td class="ins0-move">MOV R0c, R1c</td>
-          <td class="ins0-move">MOV R1, R0</td>
-          <td class="ins0-move">MOV R1, R0c</td>
-          <td class="ins0-move">MOV R1, R1c</td>
-          <td class="ins0-move">MOV R1c, R0</td>
-          <td class="ins0-move">MOV R1c, R0c</td>
-          <td class="ins0-move">MOV R1c, R1</td>
+          <td class="ins0-move">MOV PTR0,U32</td>
+          <td class="ins0-move">MOV OFS0,U16</td>
+          <td class="ins0-move">MOV IX0,U16</td>
         </tr>
         <tr>
           <th>7</th>
-          <td class="ins0-move">MOV R0, DP0</td>
-          <td class="ins0-move">MOV R0, PTR0</td>
-          <td class="ins0-move">MOV R0, *PTR0</td>
-          <td class="ins0-move">MOV R0, OFS0</td>
-          <td class="ins0-move">MOV R0, IX0</td>
-          <td class="ins0-move">MOV DP0, R0</td>
-          <td class="ins0-move">MOV PTR0, R0</td>
-          <td class="ins0-move">MOV *PTR0, R0</td>
-          <td class="ins0-move">MOV OFS0, R0</td>
-          <td class="ins0-move">MOV IX0, R0</td>
-          <td class="ins0-move">MOV R1, DP1</td>
-          <td class="ins0-move">MOV R1, PTR1</td>
-          <td class="ins0-move">MOV R1, *PTR1</td>
-          <td class="ins0-move">MOV R1, OFS1</td>
-          <td class="ins0-move">MOV R1, IX1</td>
-          <td class="ins0-move">MOV DP1, R1</td>
+          <td class="ins0-move">MOV PTR1,U32</td>
+          <td class="ins0-move">MOV OFS1,U16</td>
+          <td class="ins0-move">MOV IX1,U16</td>
+          <td class="ins0-move">MOV R0,R0c</td>
+          <td class="ins0-move">MOV R0,R1</td>
+          <td class="ins0-move">MOV R0,R1c</td>
+          <td class="ins0-move">MOV R0c,R0</td>
+          <td class="ins0-move">MOV R0c,R1</td>
+          <td class="ins0-move">MOV R0c,R1c</td>
+          <td class="ins0-move">MOV R1,R0</td>
+          <td class="ins0-move">MOV R1,R0c</td>
+          <td class="ins0-move">MOV R1,R1c</td>
+          <td class="ins0-move">MOV R1c,R0</td>
+          <td class="ins0-move">MOV R1c,R0c</td>
+          <td class="ins0-move">MOV R1c,R1</td>
+          <td class="ins0-move">MOV R0,*PTR0</td>
         </tr>
         <tr>
           <th>8</th>
-          <td class="ins0-move">MOV PTR1, R1</td>
-          <td class="ins0-move">MOV *PTR1, R1</td>
-          <td class="ins0-move">MOV OFS1, R1</td>
-          <td class="ins0-move">MOV IX1, R1</td>
-          <td class="ins0-move">MOV R0, M</td>
-          <td class="ins0-move">MOV R0, *SP[U8]</td>
-          <td class="ins0-move">MOV R0c, *SP[U8]</td>
-          <td class="ins0-move">MOV R1, *SP[U8]</td>
-          <td class="ins0-move">MOV R1c, *SP[U8]</td>
-          <td class="ins0-move">MOV M, R0</td>
-          <td class="ins0-move">MOV *SP[U8], R0</td>
-          <td class="ins0-move">MOV *SP[U8], R0c</td>
-          <td class="ins0-move">MOV *SP[U8], R1</td>
-          <td class="ins0-move">MOV *SP[U8], R1c</td>        
-          <td class="ins0-move">SWP R0, R0c</td>
-          <td class="ins0-move">SWP R0, R1</td>
+          <td class="ins0-move">MOV R0,OFS0</td>
+          <td class="ins0-move">MOV R0,IX0</td>
+          <td class="ins0-move">MOV *PTR0,R0</td>
+          <td class="ins0-move">MOV OFS0,R0</td>
+          <td class="ins0-move">MOV IX0,R0</td>
+          <td class="ins0-move">MOV R1,*PTR1</td>
+          <td class="ins0-move">MOV R1,OFS1</td>
+          <td class="ins0-move">MOV R1,IX1</td>
+          <td class="ins0-move">MOV *PTR1,R1</td>
+          <td class="ins0-move">MOV OFS1,R1</td>
+          <td class="ins0-move">MOV IX1,R1</td>
+          <td class="ins0-move">MOV R0,*SP[U8]</td>
+          <td class="ins0-move">MOV R0c,*SP[U8]</td>
+          <td class="ins0-move">MOV R1,*SP[U8]</td>
+          <td class="ins0-move">MOV R1c,*SP[U8]</td>
+          <td class="ins0-move">MOV R0,M</td>
         </tr>
         <tr>
           <th>9</th>
-          <td class="ins0-move">SWP R0, R1c</td>
-          <td class="ins0-move">SWP R0c, R1</td>
-          <td class="ins0-move">SWP R0c, R1c</td>
-          <td class="ins0-move">SWP R1, R1c</td>
-          <td class="ins0-move">SWP R0, PTR0</td>
-          <td class="ins0-move">SWP R0, *PTR0</td>
-          <td class="ins0-move">SWP R0, OFS0</td>
-          <td class="ins0-move">SWP R0, IX0</td>
-          <td class="ins0-move">SWP R1, PTR1</td>
-          <td class="ins0-move">SWP R1, *PTR1</td>
-          <td class="ins0-move">SWP R1, OFS1</td>
-          <td class="ins0-move">SWP R1, IX1</td>
-          <td class="ins0-move">SWP R0, M</td>
-          <td class="ins0-move">SWP R1, M</td>
-          <td class="ins0-other">NOP</td>
-          <td class="ins0-stack">PSH CP</td>
+          <td class="ins0-move">MOV *SP[U8],R0</td>
+          <td class="ins0-move">MOV *SP[U8],R0c</td>
+          <td class="ins0-move">MOV *SP[U8],R1</td>
+          <td class="ins0-move">MOV *SP[U8],R1c</td>
+          <td class="ins0-move">MOV M,R0</td>
+          <td class="ins0-move">SWP R0,R0c</td>
+          <td class="ins0-move">SWP R0,R1</td>
+          <td class="ins0-move">SWP R0,R1c</td>
+          <td class="ins0-move">SWP R0c,R1</td>
+          <td class="ins0-move">SWP R0c,R1c</td>
+          <td class="ins0-move">SWP R1,R1c</td>
+          <td class="ins0-move">SWP R0,*PTR0</td>
+          <td class="ins0-move">SWP R0,OFS0</td>
+          <td class="ins0-move">SWP R0,IX0</td>
+          <td class="ins0-move">SWP R1,*PTR1</td>
+          <td class="ins0-move">SWP R1,OFS1</td>
         </tr>
         <tr>
           <th>A</th>
+          <td class="ins0-move">SWP R1,IX1</td>
+          <td class="ins0-stack">PSH CP</td>
           <td class="ins0-stack">PSH ST</td>
           <td class="ins0-stack">PSH R0</td>
           <td class="ins0-stack">PSH R0c</td>
@@ -2195,11 +2166,11 @@ SUM:
           <td class="ins0-stack">PSH OFS1</td>
           <td class="ins0-stack">PSH IX1</td>
           <td class="ins0-stack">PUL CP</td>
-          <td class="ins0-stack">PUL ST</td>
-          <td class="ins0-stack">PUL R0</td>
         </tr>
         <tr>
           <th>B</th>
+          <td class="ins0-stack">PUL ST</td>
+          <td class="ins0-stack">PUL R0</td>
           <td class="ins0-stack">PUL R0c</td>
           <td class="ins0-stack">PUL R1</td>
           <td class="ins0-stack">PUL R1c</td>
@@ -2214,11 +2185,11 @@ SUM:
           <td class="ins0-stack">SSP U8</td>
           <td class="ins0-status">CLC</td>
           <td class="ins0-status">SEC</td>
-          <td class="ins0-status">SDAM*</td>
-          <td class="ins0-status">SDAM*()</td>
         </tr>
         <tr>
           <th>C</th>
+          <td class="ins0-status">SDAM*</td>
+          <td class="ins0-status">SDAM*()</td>
           <td class="ins0-status">SDAM*[]</td>
           <td class="ins0-status">SDAM*([])</td>
           <td class="ins0-status">SDAM**</td>
@@ -2233,11 +2204,11 @@ SUM:
           <td class="ins0-status">SCAM*(*)</td>
           <td class="ins0-status">SCAM*[*]</td>
           <td class="ins0-status">SCAM*([*])</td>
-          <td class="ins0-status">SOS8</td>
-          <td class="ins0-status">SOS16</td>
         </tr>
         <tr>
           <th>D</th>
+          <td class="ins0-status">SOS8</td>
+          <td class="ins0-status">SOS16</td>
           <td class="ins0-status">SOS32</td>
           <td class="ins0-status">SOS64</td>
           <td class="ins0-status">SMMI</td>
@@ -2252,11 +2223,11 @@ SUM:
           <td class="ins0-unary">INC R1</td>
           <td class="ins0-unary">NEG R0</td>
           <td class="ins0-unary">NEG R1</td>
-          <td class="ins0-unary">NG1 R0</td>
-          <td class="ins0-unary">NG1 R1</td>
         </tr>
         <tr>
           <th>E</th>
+          <td class="ins0-unary">NG1 R0</td>
+          <td class="ins0-unary">NG1 R1</td>
           <td class="ins0-unary">NOT R0</td>
           <td class="ins0-unary">NOT R1</td>
           <td class="ins0-unary">NEXT OFS0</td>
@@ -2271,11 +2242,11 @@ SUM:
           <td class="ins0-unary">ONE IX1</td>
           <td class="ins0-unary">PREV OFS0</td>
           <td class="ins0-unary">PREV OFS1</td>
-          <td class="ins0-unary">PREV IX0</td>
-          <td class="ins0-unary">PREV IX1</td>
         </tr>
         <tr>
           <th>F</th>
+          <td class="ins0-unary">PREV IX0</td>
+          <td class="ins0-unary">PREV IX1</td>
           <td class="ins0-unary">SHA R0</td>
           <td class="ins0-unary">SHA R1</td>
           <td class="ins0-unary">SHL R0</td>
@@ -2288,10 +2259,339 @@ SUM:
           <td class="ins0-unary">ZRO OFS1</td>
           <td class="ins0-unary">ZRO IX0</td>
           <td class="ins0-unary">ZRO IX1</td>
-          <td class="ins0-"</td>
-          <td class="ins0-"</td>
-          <td class="ins0-"</td>
-          <td class="ins0-"</td>
+          <td class="ins0-other">NOP</td>
+          <td class="ins0-other">EXT</td>
+        </tr>
+      </tbody>
+    </table>
+    
+    <p>Opcodes - Page 1</p>
+    <table id="opcodes1">
+      <thead>
+        <tr>
+          <th></th>
+          <th>0</th>
+          <th>1</th>
+          <th>2</th>
+          <th>3</th>
+          <th>4</th>
+          <th>5</th>
+          <th>6</th>
+          <th>7</th>
+          <th>8</th>
+          <th>9</th>
+          <th>A</th>
+          <th>B</th>
+          <th>C</th>
+          <th>D</th>
+          <th>E</th>
+          <th>F</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th>0</th>
+          <td class="ins0-binary">ADD R0,O</td>
+          <td class="ins0-binary">ADD R0c,O</td>
+          <td class="ins0-binary">ADD R1,O</td>
+          <td class="ins0-binary">ADD R1c,O</td>
+          <td class="ins0-binary">ADD R0,*PTR0</td>
+          <td class="ins0-binary">ADD R0c,*PTR0</td>
+          <td class="ins0-binary">ADD R1,*PTR1</td>
+          <td class="ins0-binary">ADD R1c,*PTR1</td>
+          <td class="ins0-binary">ADD *PTR0,R0</td>
+          <td class="ins0-binary">ADD *PTR0,R0c</td>
+          <td class="ins0-binary">ADD *PTR1,R1</td>
+          <td class="ins0-binary">ADD *PTR1,R1c</td>
+          <td class="ins0-binary">CMP R0,O</td>
+          <td class="ins0-binary">CMP R0c,O</td>
+          <td class="ins0-binary">CMP R1,O</td>
+          <td class="ins0-binary">CMP R1c,O</td>
+        </tr>
+        <tr>
+          <th>1</th>
+          <td class="ins0-binary">SHA R0,U8</td>
+          <td class="ins0-binary">SHA R0c,U8</td>
+          <td class="ins0-binary">SHA R1,U8</td>
+          <td class="ins0-binary">SHA R1c,U8</td>
+          <td class="ins0-binary">SHL R0,U8</td>
+          <td class="ins0-binary">SHL R0c,U8</td>
+          <td class="ins0-binary">SHL R1,U8</td>
+          <td class="ins0-binary">SHL R1c,U8</td>
+          <td class="ins0-binary">SHR R0,U8</td>
+          <td class="ins0-binary">SHR R0c,U8</td>
+          <td class="ins0-binary">SHR R1,U8</td>
+          <td class="ins0-binary">SHR R1c,U8</td>
+          <td class="ins0-binary">SUB R0,O</td>
+          <td class="ins0-binary">SUB R0c,O</td>
+          <td class="ins0-binary">SUB R1,O</td>
+          <td class="ins0-binary">SUB R1c,O</td>
+        </tr>
+        <tr>
+          <th>2</th>
+          <td class="ins0-binary">SUB R0,*PTR0</td>
+          <td class="ins0-binary">SUB R0c,*PTR0</td>
+          <td class="ins0-binary">SUB R1,*PTR1</td>
+          <td class="ins0-binary">SUB R1c,*PTR1</td>
+          <td class="ins0-binary">SUB *PTR0,R0</td>
+          <td class="ins0-binary">SUB *PTR0,R0c</td>
+          <td class="ins0-binary">SUB *PTR1,R1</td>
+          <td class="ins0-binary">SUB *PTR1,R1c</td>
+          <td class="ins0-move">MOV CP,U32</td>
+          <td class="ins0-move">MOV DP0,U32</td>
+          <td class="ins0-move">MOV DP1,U32</td>
+          <td class="ins0-move">MOV SB,U32</td>
+          <td class="ins0-move">MOV SP,U16</td>
+          <td class="ins0-move">MOV CP,R0</td>
+          <td class="ins0-move">MOV ST,R0</td>
+          <td class="ins0-move">MOV DP0,R0</td>
+        </tr>
+        <tr>
+          <th>3</th>
+          <td class="ins0-move">MOV PTR0,R0</td>
+          <td class="ins0-move">MOV DP1,R0</td>
+          <td class="ins0-move">MOV PTR1,R0</td>
+          <td class="ins0-move">MOV SB,R0</td>
+          <td class="ins0-move">MOV SP,R0</td>
+          <td class="ins0-move">MOV R0,CP</td>
+          <td class="ins0-move">MOV R0,ST</td>
+          <td class="ins0-move">MOV R0,DP0</td>
+          <td class="ins0-move">MOV R0,PTR0</td>
+          <td class="ins0-move">MOV R0,DP1</td>
+          <td class="ins0-move">MOV R0,PTR1</td>
+          <td class="ins0-move">MOV R0,SB</td>
+          <td class="ins0-move">MOV R0,SP</td>
+          <td class="ins0-move">MOV R0,O</td>
+          <td class="ins0-move">MOV R0c,O</td>
+          <td class="ins0-move">MOV R1,O</td>
+        </tr>
+        <tr>
+          <th>4</th>
+          <td class="ins0-move">MOV R1c,O</td>
+          <td class="ins0-move">MOV R0c,*PTR0</td>
+          <td class="ins0-move">MOV R1c,*PTR1</td>
+          <td class="ins0-move">MOV *PTR0,R0c</td>
+          <td class="ins0-move">MOV *PTR1,R1c</td>
+          <td class="ins0-move">MOV R0c,M</td>
+          <td class="ins0-move">MOV R1,M</td>
+          <td class="ins0-move">MOV R1c,M</td>
+          <td class="ins0-move">MOV M,R0c</td>
+          <td class="ins0-move">MOV M,R1</td>
+          <td class="ins0-move">MOV M,R1c</td>
+          <td class="ins0-move">SWP R0,M</td>
+          <td class="ins0-move">SWP R0c,M</td>
+          <td class="ins0-move">SWP R1,M</td>
+          <td class="ins0-move">SWP R1c,M</td>
+          <td class="ins0-unary">DEC R0c</td>
+        </tr>          
+        <tr>
+          <th>5</th>
+          <td class="ins0-unary">DEC R1c</td>
+          <td class="ins0-unary">INC R0c</td>
+          <td class="ins0-unary">INC R1c</td>
+          <td class="ins0-unary">NEG R0c</td>
+          <td class="ins0-unary">NEG R1c</td>
+          <td class="ins0-unary">NG1 R0c</td>
+          <td class="ins0-unary">NG1 R1c</td>
+          <td class="ins0-unary">NOT R0c</td>
+          <td class="ins0-unary">NOT R1c</td>
+          <td class="ins0-unary">ONE R0c</td>
+          <td class="ins0-unary">ONE R1c</td>
+          <td class="ins0-unary">SHA R0c</td>
+          <td class="ins0-unary">SHA R1c</td>
+          <td class="ins0-unary">SHL R0c</td>
+          <td class="ins0-unary">SHL R1c</td>
+          <td class="ins0-unary">SHR R0c</td>
+        </tr>
+        <tr>
+          <th>6</th>
+          <td class="ins0-unary">SHR R1c</td>
+          <td class="ins0-unary">ZRO R0c</td>
+          <td class="ins0-unary">ZRO R1c</td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+        </tr>
+        <tr>
+          <th>7</th>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+        </tr>
+        <tr>
+          <th>8</th>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+        </tr>
+        <tr>
+          <th>9</th>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+        </tr>
+        <tr>
+          <th>A</th>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+        </tr>
+        <tr>
+          <th>B</th>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+        </tr>
+        <tr>
+          <th>C</th>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+        </tr>
+        <tr>
+          <th>D</th>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+        </tr>
+        <tr>
+          <th>E</th>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+        </tr>
+        <tr>
+          <th>F</th>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
+          <td class="ins0-"></td>
         </tr>
       </tbody>
     </table>
