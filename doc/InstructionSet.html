@@ -749,6 +749,20 @@ SUM:
           <td>CVZN---- --------</td>
         </tr>
         <tr>
+          <td>ADD</td>
+          <td>Add</td>
+          <td>1</td>
+          <td>
+            ADD R, O<br>
+            ADD *PTR, O<br>
+            ADD R, *PTR<br>
+            ADD Rc, *PTR<br>
+            ADD *PTR, R<br>
+            ADD *PTR, Rc
+          </td>
+          <td>CVZN---- --------</td>
+        </tr>
+        <tr>
           <td>AND</td>
           <td>Bitwise</td>
           <td>0</td>
@@ -769,6 +783,17 @@ SUM:
             C = 1 if Op1 &gt;= Op2 unsigned<br>
             V = 1 if Op1 &gt;= Op2 signed (R, Rc only)<br>
             Z = 1 if Op1 = Op2
+          </td>
+          <td>CVZ----- --------</td>
+        </tr>
+        <tr>
+          <td>CMP</td>
+          <td>Compare</td>
+          <td>1</td>
+          <td>
+            CMP R, O<br>
+            CMP Rc, O<br>
+            CMP *PTR, O
           </td>
           <td>CVZ----- --------</td>
         </tr>
@@ -868,6 +893,16 @@ SUM:
           <td>C-ZN---- --------</td>
         </tr>
         <tr>
+          <td>SHA</td>
+          <td>Shift right arithmetic</td>
+          <td>1</td>
+          <td>
+            SHA R, U8<br>
+            SHA Rc, U8
+          </td>
+          <td>C-ZN---- --------</td>
+        </tr>
+        <tr>
           <td>SHL</td>
           <td>Shift left</td>
           <td>0</td>
@@ -879,6 +914,16 @@ SUM:
           <td>C-ZN---- --------</td>
         </tr>
         <tr>
+          <td>SHL</td>
+          <td>Shift left</td>
+          <td>1</td>
+          <td>
+            SHL R, U8<br>
+            SHL Rc, U8
+          </td>
+          <td>C-ZN---- --------</td>
+        </tr>
+        <tr>
           <td>SHR</td>
           <td>Shift right</td>
           <td>0</td>
@@ -886,6 +931,16 @@ SUM:
             SHR R, Rc<br>
             Op1 = Op1 &gt;&gt; OP2<br>
             C = 1 if any of the lower Op2 bits of Op1 are set
+          </td>
+          <td>C-ZN---- --------</td>
+        </tr>
+        <tr>
+          <td>SHR</td>
+          <td>Shift right</td>
+          <td>1</td>
+          <td>
+            SHR R, U8<br>
+            SHR Rc, U8
           </td>
           <td>C-ZN---- --------</td>
         </tr>
@@ -912,6 +967,21 @@ SUM:
             Op1 = Op1 - Op2<br>
             C = 1 if Op1' > Op1 unsigned<br>
             V = 1 if (H(Op1') != H(Op1)) and (H(Op1) = H(Op1')) (R, Rc only)<br>
+          </td>
+          <td>CVZN---- --------</td>
+        </tr>
+        <tr>
+          <td>SUB</td>
+          <td>Subtract</td>
+          <td>1</td>
+          <td>
+            SUB R, O<br>
+            SUB Rc, O<br>
+            SUB *PTR, O<br>
+            SUB R, *PTR<br>
+            SUB Rc, *PTR<br>
+            SUB *PTR, R<br>
+            SUB *PTR, Rc
           </td>
           <td>CVZN---- --------</td>
         </tr>
@@ -1358,6 +1428,49 @@ SUM:
           </td>
         </tr>
         <tr>
+          <td>MOV</td>
+          <td>Move data</td>
+          <td>1</td>
+          <td>
+            MOV CP, U32<br>
+            MOV DP0, U32<br>
+            MOV DP1, U32<br>
+            MOV SB, U32<br>
+            MOV SP, U16<br>
+            MOV CP, R0<br>
+            MOV ST, R0<br>
+            MOV DP0, R0<br>
+            MOV PTR0, R0<br>
+            MOV DP1, R0<br>
+            MOV PTR1, R0<br>
+            MOV SB, R0<br>
+            MOV SP, R0<br>
+            MOV R0, CP<br>
+            MOV R0, ST<br>
+            MOV R0, DP0<br>
+            MOV R0, PTR0<br>
+            MOV R0, DP1<br>
+            MOV R0, PTR1<br>
+            MOV R0, SB<br>
+            MOV R0, SP<br>
+            MOV R0, O<br>
+            MOV R0c, O<br>
+            MOV R1, O<br>
+            MOV R1c, O<br>
+            MOV R0c, *PTR0<br>
+            MOV R1c, *PTR1<br>
+            MOV *PTR0, R0c<br>
+            MOV *PTR1, R1c<br>
+            MOV R0c, M<br>
+            MOV R1, M<br>
+            MOV R1c, M<br>
+            MOV M, R0c<br>
+            MOV M, R1<br>
+            MOV M, R1c<br>
+          </td>
+          <td>--ZN--- --------</td>
+        </tr>
+        <tr>
           <td>SWP</td>
           <td>Swap data</td>
           <td>0</td>
@@ -1383,6 +1496,17 @@ SUM:
           </td>
           <td>
             --ZN---- --------<br>
+          </td>
+        </tr>
+        <tr>
+          <td>SWP</td>
+          <td>Swap data</td>
+          <td>1</td>
+          <td>
+            SWP R0, M<br>
+            SWP R0c, M<br>
+            SWP R1, M<br>
+            SWP R1c, M<br>
           </td>
         </tr>
         <tr>
@@ -1694,6 +1818,16 @@ SUM:
           <td>CVZN---- --------</td>
         </tr>
         <tr>
+          <td>DEC</td>
+          <td>Decrement</td>
+          <td>1</td>
+          <td>
+            DEC R0c<br>
+            DEC R1c
+          </td>
+          <td>CVZN---- --------</td>
+        </tr>
+        <tr>
           <td>INC</td>
           <td>Increment</td>
           <td>0</td>
@@ -1704,6 +1838,16 @@ SUM:
             V = 1 if (H(Op) = 0) and (H(Op') = 1)<br>
             Z = 1 if Op' = 0<br>
             N = H(Op')
+          </td>
+          <td>CVZN---- --------</td>
+        </tr>
+        <tr>
+          <td>INC</td>
+          <td>Increment</td>
+          <td>1</td>
+          <td>
+            INC R0c<br>
+            INC R1c
           </td>
           <td>CVZN---- --------</td>
         </tr>
@@ -1720,6 +1864,16 @@ SUM:
           <td>--ZN---- --------</td>
         </tr>
         <tr>
+          <td>NEG</td>
+          <td>Negate</td>
+          <td>1</td>
+          <td>
+            NEG R0c<br>
+            NEG R1c
+          </td>
+          <td>--ZN---- --------</td>
+        </tr>
+        <tr>
           <td>NG1</td>
           <td>Set to -1</td>
           <td>0</td>
@@ -1732,6 +1886,16 @@ SUM:
           <td>--01----- --------</td>
         </tr>
         <tr>
+          <td>NG1</td>
+          <td>Set to -1</td>
+          <td>1</td>
+          <td>
+            NG1 R0c<br>
+            NG1 R1c
+          </td>
+          <td>--ZN---- --------</td>
+        </tr>
+        <tr>
           <td>NOT</td>
           <td>Bitwise NOT</td>
           <td>0</td>
@@ -1740,6 +1904,16 @@ SUM:
             Op = ~Op<br>
             Z = 1 if Op' = 0<br>
             N = H(Op')
+          </td>
+          <td>--ZN---- --------</td>
+        </tr>
+        <tr>
+          <td>NOT</td>
+          <td>Bitwise NOT</td>
+          <td>1</td>
+          <td>
+            NOT R0c<br>
+            NOT R1c
           </td>
           <td>--ZN---- --------</td>
         </tr>
@@ -1768,6 +1942,16 @@ SUM:
           <td>--00---- --------</td>
         </tr>
         <tr>
+          <td>ONE</td>
+          <td>Set to 1</td>
+          <td>1</td>
+          <td>
+            ONE R0c<br>
+            ONE R1c
+          </td>
+          <td>--ZN---- --------</td>
+        </tr>
+        <tr>
           <td>PREV</td>
           <td>Subtract operand size from register</td>
           <td>0</td>
@@ -1791,6 +1975,16 @@ SUM:
           <td>--ZN--- --------</td>
         </tr>
         <tr>
+          <td>SHA</td>
+          <td>Arithmetic shift right</td>
+          <td>1</td>
+          <td>
+            SHA R0c<br>
+            SHA R1c
+          </td>
+          <td>--ZN--- --------</td>
+        </tr>
+        <tr>
           <td>SHL</td>
           <td>Shift left with carry</td>
           <td>0</td>
@@ -1801,6 +1995,16 @@ SUM:
             C = H(Op)
           </td>
           <td>C-ZN--- --------</td>
+        </tr>
+        <tr>
+          <td>SHL</td>
+          <td>Shift left with carry</td>
+          <td>1</td>
+          <td>
+            SHL R0c<br>
+            SHL R1c
+          </td>
+          <td>--ZN--- --------</td>
         </tr>
         <tr>
           <td>SHR</td>
@@ -1815,6 +2019,16 @@ SUM:
           <td>C-ZN--- --------</td>
         </tr>
         <tr>
+          <td>SHR</td>
+          <td>Shift right with carry</td>
+          <td>1</td>
+          <td>
+            SHR R0c<br>
+            SHR R1c
+          </td>
+          <td>--ZN--- --------</td>
+        </tr>
+        <tr>
           <td>ZRO</td>
           <td>Set to 0</td>
           <td>0</td>
@@ -1825,6 +2039,16 @@ SUM:
             Op = 0
           </td>
           <td>--10---- --------</td>
+        </tr>
+        <tr>
+          <td>ZRO</td>
+          <td>Set to 0</td>
+          <td>1</td>
+          <td>
+            ZRO R0c<br>
+            ZRO R1c
+          </td>
+          <td>--ZN--- --------</td>
         </tr>
       </tbody>
     </table>
@@ -2295,6 +2519,8 @@ SUM:
           <td class="ins0-binary">ADD R0c,O</td>
           <td class="ins0-binary">ADD R1,O</td>
           <td class="ins0-binary">ADD R1c,O</td>
+          <td class="ins0-binary">ADD *PTR0,O</td>
+          <td class="ins0-binary">ADD *PTR1,O</td>
           <td class="ins0-binary">ADD R0,*PTR0</td>
           <td class="ins0-binary">ADD R0c,*PTR0</td>
           <td class="ins0-binary">ADD R1,*PTR1</td>
@@ -2305,11 +2531,13 @@ SUM:
           <td class="ins0-binary">ADD *PTR1,R1c</td>
           <td class="ins0-binary">CMP R0,O</td>
           <td class="ins0-binary">CMP R0c,O</td>
-          <td class="ins0-binary">CMP R1,O</td>
-          <td class="ins0-binary">CMP R1c,O</td>
         </tr>
         <tr>
           <th>1</th>
+          <td class="ins0-binary">CMP R1,O</td>
+          <td class="ins0-binary">CMP R1c,O</td>
+          <td class="ins0-binary">CMP *PTR0,O</td>
+          <td class="ins0-binary">CMP *PTR1,O</td>
           <td class="ins0-binary">SHA R0,U8</td>
           <td class="ins0-binary">SHA R0c,U8</td>
           <td class="ins0-binary">SHA R1,U8</td>
@@ -2322,13 +2550,15 @@ SUM:
           <td class="ins0-binary">SHR R0c,U8</td>
           <td class="ins0-binary">SHR R1,U8</td>
           <td class="ins0-binary">SHR R1c,U8</td>
+        </tr>
+        <tr>
+          <th>2</th>
           <td class="ins0-binary">SUB R0,O</td>
           <td class="ins0-binary">SUB R0c,O</td>
           <td class="ins0-binary">SUB R1,O</td>
           <td class="ins0-binary">SUB R1c,O</td>
-        </tr>
-        <tr>
-          <th>2</th>
+          <td class="ins0-binary">SUB *PTR0,O</td>
+          <td class="ins0-binary">SUB *PTR1,O</td>
           <td class="ins0-binary">SUB R0,*PTR0</td>
           <td class="ins0-binary">SUB R0c,*PTR0</td>
           <td class="ins0-binary">SUB R1,*PTR1</td>
@@ -2339,15 +2569,15 @@ SUM:
           <td class="ins0-binary">SUB *PTR1,R1c</td>
           <td class="ins0-move">MOV CP,U32</td>
           <td class="ins0-move">MOV DP0,U32</td>
+        </tr>
+        <tr>
+          <th>3</th>
           <td class="ins0-move">MOV DP1,U32</td>
           <td class="ins0-move">MOV SB,U32</td>
           <td class="ins0-move">MOV SP,U16</td>
           <td class="ins0-move">MOV CP,R0</td>
           <td class="ins0-move">MOV ST,R0</td>
           <td class="ins0-move">MOV DP0,R0</td>
-        </tr>
-        <tr>
-          <th>3</th>
           <td class="ins0-move">MOV PTR0,R0</td>
           <td class="ins0-move">MOV DP1,R0</td>
           <td class="ins0-move">MOV PTR1,R0</td>
@@ -2358,15 +2588,15 @@ SUM:
           <td class="ins0-move">MOV R0,DP0</td>
           <td class="ins0-move">MOV R0,PTR0</td>
           <td class="ins0-move">MOV R0,DP1</td>
+        </tr>
+        <tr>
+          <th>4</th>
           <td class="ins0-move">MOV R0,PTR1</td>
           <td class="ins0-move">MOV R0,SB</td>
           <td class="ins0-move">MOV R0,SP</td>
           <td class="ins0-move">MOV R0,O</td>
           <td class="ins0-move">MOV R0c,O</td>
           <td class="ins0-move">MOV R1,O</td>
-        </tr>
-        <tr>
-          <th>4</th>
           <td class="ins0-move">MOV R1c,O</td>
           <td class="ins0-move">MOV R0c,*PTR0</td>
           <td class="ins0-move">MOV R1c,*PTR1</td>
@@ -2377,15 +2607,15 @@ SUM:
           <td class="ins0-move">MOV R1c,M</td>
           <td class="ins0-move">MOV M,R0c</td>
           <td class="ins0-move">MOV M,R1</td>
+        </tr>          
+        <tr>
+          <th>5</th>
           <td class="ins0-move">MOV M,R1c</td>
           <td class="ins0-move">SWP R0,M</td>
           <td class="ins0-move">SWP R0c,M</td>
           <td class="ins0-move">SWP R1,M</td>
           <td class="ins0-move">SWP R1c,M</td>
           <td class="ins0-unary">DEC R0c</td>
-        </tr>          
-        <tr>
-          <th>5</th>
           <td class="ins0-unary">DEC R1c</td>
           <td class="ins0-unary">INC R0c</td>
           <td class="ins0-unary">INC R1c</td>
@@ -2396,24 +2626,18 @@ SUM:
           <td class="ins0-unary">NOT R0c</td>
           <td class="ins0-unary">NOT R1c</td>
           <td class="ins0-unary">ONE R0c</td>
+        </tr>
+        <tr>
+          <th>6</th>
           <td class="ins0-unary">ONE R1c</td>
           <td class="ins0-unary">SHA R0c</td>
           <td class="ins0-unary">SHA R1c</td>
           <td class="ins0-unary">SHL R0c</td>
           <td class="ins0-unary">SHL R1c</td>
           <td class="ins0-unary">SHR R0c</td>
-        </tr>
-        <tr>
-          <th>6</th>
           <td class="ins0-unary">SHR R1c</td>
           <td class="ins0-unary">ZRO R0c</td>
           <td class="ins0-unary">ZRO R1c</td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
-          <td class="ins0-"></td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
           <td class="ins0-"></td>
